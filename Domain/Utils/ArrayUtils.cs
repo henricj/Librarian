@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -159,7 +160,7 @@ namespace Nyerguds.Util
         {
             var size = Marshal.SizeOf(typeof(T));
             if (size + offset > bytes.Length)
-                throw new IndexOutOfRangeException("Array is too small to get the requested struct!");
+                throw new InvalidEnumArgumentException("Array is too small to get the requested struct!");
             var ptr = IntPtr.Zero;
             try
             {

@@ -1,7 +1,9 @@
 ﻿using Nyerguds.Util;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 
 namespace LibrarianTool.Domain.Archives
 {
@@ -69,7 +71,7 @@ namespace LibrarianTool.Domain.Archives
                         isScript = !isImage && script == 0x7E7C;
                         loadStream.Position = readOffs;
                     }
-                    var filename = filesList.Count.ToString("00000000") + "." + (isImage ? "gx2" : (isScript ? "txt" : "dat"));
+                    var filename = filesList.Count.ToString("00000000", CultureInfo.InvariantCulture) + "." + (isImage ? "gx2" : (isScript ? "txt" : "dat"));
                     filesList.Add(new ArchiveEntry(filename, archivePath, prevIndexOffs, indexOffs - prevIndexOffs));
                 }
                 readOffs += 4;
@@ -90,7 +92,7 @@ namespace LibrarianTool.Domain.Archives
             var entries = archive.FilesList.ToArray();
             var firstFileOffset = (entries.Length + 2) * 4;
             var fileOffset = firstFileOffset;
-            using (var bw = new BinaryWriter(new NonDisposingStream(saveStream)))
+            using (var bw = new BinaryWriter(saveStream, Encoding.UTF8, true))
             {
                 bw.Write((uint)0);
                 foreach (var entry in entries)
@@ -110,7 +112,7 @@ namespace LibrarianTool.Domain.Archives
                 bw.Write(fileOffset);
             }
             if (firstFileOffset != saveStream.Position)
-                throw new IndexOutOfRangeException("Programmer error: write start offset does not match end of index.");
+                throw new ArgumentException("Programmer error: write start offset does not match end of index.");
             foreach (var entry in entries)
                 CopyEntryContentsToStream(entry, saveStream);
             return true;

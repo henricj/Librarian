@@ -31,36 +31,36 @@ namespace Nyerguds.GameData.Compression
                 case LzwSize.Size12Bit:
                 case LzwSize.Size13Bit:
                 case LzwSize.Size14Bit:
-                    this.BITS = (int)bitSize;
+                    BITS = (int)bitSize;
                     break;
                 default:
                     throw new ArgumentException("Unsupported bit size!", nameof(bitSize));
             }
-            this.HASHING_SHIFT = this.BITS - 8; // hash bit to use with the hasing algorithm to find correct index
-            this.MAX_VALUE = (1 << this.BITS) - 1; // max value allowed based on max bits
-            this.MAX_CODE = this.MAX_VALUE - 1; // max code possible
+            HASHING_SHIFT = BITS - 8; // hash bit to use with the hasing algorithm to find correct index
+            MAX_VALUE = (1 << BITS) - 1; // max value allowed based on max bits
+            MAX_CODE = MAX_VALUE - 1; // max code possible
             // TABLE_SIZE must be bigger than the maximum allowed by maxbits and prime
             switch (bitSize)
             {
                 case LzwSize.Size12Bit:
-                    this.TABLE_SIZE = 5021;
+                    TABLE_SIZE = 5021;
                     break;
                 case LzwSize.Size13Bit:
-                    this.TABLE_SIZE = 9029;
+                    TABLE_SIZE = 9029;
                     break;
                 case LzwSize.Size14Bit:
-                    this.TABLE_SIZE = 18041;
+                    TABLE_SIZE = 18041;
                     break;
             }
-            this.code_value = new int[this.TABLE_SIZE]; // code table
-            this.prefix_code = new int[this.TABLE_SIZE]; // prefix table
-            this.append_character = new int[this.TABLE_SIZE]; // character table
+            code_value = new int[TABLE_SIZE]; // code table
+            prefix_code = new int[TABLE_SIZE]; // prefix table
+            append_character = new int[TABLE_SIZE]; // character table
         }
 
         void Initialize() // used to blank  out bit buffer incase this class is called to comprss and decompress from the same instance
         {
-            this.input_bit_buffer = 0;
-            this.input_bit_count = 0;
+            input_bit_buffer = 0;
+            input_bit_count = 0;
         }
 
         public byte[] Compress(byte[] inputBuffer)
@@ -70,32 +70,32 @@ namespace Nyerguds.GameData.Compression
             using var outStream = new MemoryStream();
             try
             {
-                this.Initialize();
+                Initialize();
                 var next_code = 256;
                 int character;
-                for (var i = 0; i < this.TABLE_SIZE; i++) // blank out table
-                    this.code_value[i] = -1;
+                for (var i = 0; i < TABLE_SIZE; i++) // blank out table
+                    code_value[i] = -1;
                 var string_code = inStream.ReadByte();
                 while ((character = inStream.ReadByte()) != -1) // read until we reach end of file
                 {
-                    var index = this.FindMatch(string_code, character);
-                    if (this.code_value[index] != -1) // set string if we have something at that index
-                        string_code = this.code_value[index];
+                    var index = FindMatch(string_code, character);
+                    if (code_value[index] != -1) // set string if we have something at that index
+                        string_code = code_value[index];
                     else // insert new entry
                     {
-                        if (next_code <= this.MAX_CODE) // otherwise we insert into the tables
+                        if (next_code <= MAX_CODE) // otherwise we insert into the tables
                         {
-                            this.code_value[index] = next_code++; // insert and increment next code to use
-                            this.prefix_code[index] = string_code;
-                            this.append_character[index] = (byte)character;
+                            code_value[index] = next_code++; // insert and increment next code to use
+                            prefix_code[index] = string_code;
+                            append_character[index] = (byte)character;
                         }
-                        this.OutputCode(outStream, string_code); // output the data in the string
+                        OutputCode(outStream, string_code); // output the data in the string
                         string_code = character;
                     }
                 }
-                this.OutputCode(outStream, string_code); // output last code
-                this.OutputCode(outStream, this.MAX_VALUE); // output end of buffer
-                this.OutputCode(outStream, 0); // flush
+                OutputCode(outStream, string_code); // output last code
+                OutputCode(outStream, MAX_VALUE); // output end of buffer
+                OutputCode(outStream, 0); // flush
                 outputBuffer = outStream.ToArray();
             }
             catch (Exception)
@@ -109,17 +109,17 @@ namespace Nyerguds.GameData.Compression
         // hasing function, tries to find index of prefix+char, if not found returns -1 to signify space available
         int FindMatch(int hash_prefix, int hash_character)
         {
-            var index = (hash_character << this.HASHING_SHIFT) ^ hash_prefix;
-            var offset = (index == 0) ? 1 : this.TABLE_SIZE - index;
+            var index = (hash_character << HASHING_SHIFT) ^ hash_prefix;
+            var offset = (index == 0) ? 1 : TABLE_SIZE - index;
             while (true)
             {
-                if (this.code_value[index] == -1)
+                if (code_value[index] == -1)
                     return index;
-                if (this.prefix_code[index] == hash_prefix && this.append_character[index] == hash_character)
+                if (prefix_code[index] == hash_prefix && append_character[index] == hash_character)
                     return index;
                 index -= offset;
                 if (index < 0)
-                    index += this.TABLE_SIZE;
+                    index += TABLE_SIZE;
             }
         }
 
@@ -131,15 +131,15 @@ namespace Nyerguds.GameData.Compression
             {
                 try
                 {
-                    this.Initialize();
+                    Initialize();
                     var next_code = 256;
-                    var decode_stack = new byte[this.TABLE_SIZE];
+                    var decode_stack = new byte[TABLE_SIZE];
                     inStream.Seek(startOffset, SeekOrigin.Begin);
-                    var old_code = this.input_code(inStream);
+                    var old_code = input_code(inStream);
                     var character = (byte)old_code;
                     outStream.WriteByte((byte)old_code); // write first Byte since it is plain ascii
-                    var new_code = this.input_code(inStream);
-                    while (new_code != this.MAX_VALUE) // read file all file
+                    var new_code = input_code(inStream);
+                    while (new_code != MAX_VALUE) // read file all file
                     {
                         int code;
                         int iCounter;
@@ -158,11 +158,11 @@ namespace Nyerguds.GameData.Compression
                         // decode_string
                         while (code > 255) // decode string by cycling back through the prefixes
                         {
-                            decode_stack[iCounter] = (byte)this.append_character[code];
+                            decode_stack[iCounter] = (byte)append_character[code];
                             ++iCounter;
-                            if (iCounter >= this.MAX_CODE)
-                                throw new Exception("Decompression failed.");
-                            code = this.prefix_code[code];
+                            if (iCounter >= MAX_CODE)
+                                throw new FormatException("Decompression failed.");
+                            code = prefix_code[code];
                         }
                         decode_stack[iCounter] = (byte)code;
                         character = decode_stack[iCounter]; // set last char used
@@ -171,14 +171,14 @@ namespace Nyerguds.GameData.Compression
                             outStream.WriteByte(decode_stack[iCounter]);
                             --iCounter;
                         }
-                        if (next_code <= this.MAX_CODE) // insert into tables
+                        if (next_code <= MAX_CODE) // insert into tables
                         {
-                            this.prefix_code[next_code] = old_code;
-                            this.append_character[next_code] = character;
+                            prefix_code[next_code] = old_code;
+                            append_character[next_code] = character;
                             ++next_code;
                         }
                         old_code = new_code;
-                        new_code = this.input_code(inStream);
+                        new_code = input_code(inStream);
                     }
                     outputBuffer = outStream.ToArray();
                 }
@@ -200,27 +200,27 @@ namespace Nyerguds.GameData.Compression
 
         int input_code(MemoryStream pReader)
         {
-            while (this.input_bit_count <= 24) // fill up buffer
+            while (input_bit_count <= 24) // fill up buffer
             {
-                this.input_bit_buffer |= (ulong)pReader.ReadByte() << (24 - this.input_bit_count); // insert Byte into buffer
-                this.input_bit_count += 8; // increment counter
+                input_bit_buffer |= (ulong)pReader.ReadByte() << (24 - input_bit_count); // insert Byte into buffer
+                input_bit_count += 8; // increment counter
             }
-            var return_value = (uint)this.input_bit_buffer >> (32 - this.BITS);
-            this.input_bit_buffer <<= this.BITS; // remove it from buffer
-            this.input_bit_count -= this.BITS; // decrement bit counter
+            var return_value = (uint)input_bit_buffer >> (32 - BITS);
+            input_bit_buffer <<= BITS; // remove it from buffer
+            input_bit_count -= BITS; // decrement bit counter
             var temp = (int)return_value;
             return temp;
         }
 
         void OutputCode(MemoryStream output, int code)
         {
-            this.input_bit_buffer |= (ulong)code << (32 - this.BITS - this.input_bit_count); // make space and insert new code in buffer
-            this.input_bit_count += this.BITS; // increment bit counter
-            while (this.input_bit_count >= 8) // write all the bytes we can
+            input_bit_buffer |= (ulong)code << (32 - BITS - input_bit_count); // make space and insert new code in buffer
+            input_bit_count += BITS; // increment bit counter
+            while (input_bit_count >= 8) // write all the bytes we can
             {
-                output.WriteByte((byte)((this.input_bit_buffer >> 24) & 255)); // write Byte from bit buffer
-                this.input_bit_buffer <<= 8; // remove written Byte from buffer
-                this.input_bit_count -= 8; // decrement counter
+                output.WriteByte((byte)((input_bit_buffer >> 24) & 255)); // write Byte from bit buffer
+                input_bit_buffer <<= 8; // remove written Byte from buffer
+                input_bit_count -= 8; // decrement counter
             }
         }
     }

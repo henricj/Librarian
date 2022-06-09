@@ -86,7 +86,7 @@ namespace LibrarianTool.Domain.Archives
                     if (fileLength > ushort.MaxValue)
                         throw new ArgumentException("The file \"" + entry.PhysicalPath + "\" is too large to write to this type of archive!");
                 }
-                var curName = this.GetInternalFilename(entry.FileName);
+                var curName = GetInternalFilename(entry.FileName);
                 var copySize = Math.Min(curName.Length, 12);
                 Array.Copy(enc.GetBytes(curName), 0, buffer, 0, copySize);
                 for (var b = copySize; b < 12; b++)

@@ -1,6 +1,8 @@
+using LibrarianTool.Domain.Utils;
 using Nyerguds.Util;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,17 +15,17 @@ namespace LibrarianTool.Domain.Archives
         public override string ShortTypeDescription => "KORT SND";
         public override string[] FileExtensions { get { return new[] { "SND" }; } }
 
-        protected const string BufferInfoFormat = "Buffer info: 0x{0:X8}";
+        const string BufferInfoFormat = "Buffer info: 0x{0:X8}";
 
         protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
         {
             loadStream.Position = 0;
-            this.ExtraInfo = string.Empty;
+            ExtraInfo = string.Empty;
             Span<byte> filesCount = stackalloc byte[2];
             var amount = loadStream.Read(filesCount);
             var nrOfFiles = (int)ArrayUtils.ReadIntFromByteArray(filesCount, true);
             if (amount != 2)
-                throw new FileTypeLoadException("Too short to be a " + this.ShortTypeDescription + " archive.");
+                throw new FileTypeLoadException("Too short to be a " + ShortTypeDescription + " archive.");
             Span<byte> buffer = stackalloc byte[25];
             long firstPos = 2 + nrOfFiles * 25;
             var filesList = new List<ArchiveEntry>();
@@ -31,16 +33,16 @@ namespace LibrarianTool.Domain.Archives
             {
                 amount = loadStream.Read(buffer);
                 if (amount < buffer.Length)
-                    throw new FileTypeLoadException("Header too small! Not a " + this.ShortTypeDescription + " archive.");
+                    throw new FileTypeLoadException("Header too small! Not a " + ShortTypeDescription + " archive.");
                 var size = (uint)ArrayUtils.ReadIntFromByteArray(buffer[..4], true);
                 var buff = (uint)ArrayUtils.ReadIntFromByteArray(buffer[4..8], true);
                 var buffBytes = new byte[4];
                 buffer.Slice(4, 4).CopyTo(buffBytes);
                 var offset = (uint)ArrayUtils.ReadIntFromByteArray(buffer.Slice(8, 4), true);
                 if (offset + size > loadStream.Length)
-                    throw new FileTypeLoadException("Header refers to data outside the file! Not a " + this.ShortTypeDescription + " archive.");
+                    throw new FileTypeLoadException("Header refers to data outside the file! Not a " + ShortTypeDescription + " archive.");
                 if (offset < firstPos)
-                    throw new FileTypeLoadException("Header refers to data inside header! Not a " + this.ShortTypeDescription + " archive.");
+                    throw new FileTypeLoadException("Header refers to data inside header! Not a " + ShortTypeDescription + " archive.");
                 ReadOnlySpan<byte> filenameB = buffer[12..];
                 var index = filenameB.IndexOf((byte)0);
                 if (index >= 0)
@@ -48,19 +50,19 @@ namespace LibrarianTool.Domain.Archives
                 foreach (var c in filenameB)
                 {
                     if (c <= 0x20 || c > 0x7F)
-                        throw new FileTypeLoadException("Non-ASCII filename characters found in header! Not a " + this.ShortTypeDescription + " archive.");
+                        throw new FileTypeLoadException("Non-ASCII filename characters found in header! Not a " + ShortTypeDescription + " archive.");
                 }
 
                 var filename = Encoding.ASCII.GetString(filenameB);
                 var archiveEntry = new ArchiveEntry(filename, archivePath, (int)offset, (int)size);
                 var sbExtraInfo = new StringBuilder();
-                sbExtraInfo.Append(string.Format(BufferInfoFormat, buff));
+                sbExtraInfo.Append(string.Format(CultureInfo.InvariantCulture, BufferInfoFormat, buff));
                 IdentifyType(loadStream, offset, size, sbExtraInfo);
                 archiveEntry.ExtraInfo = sbExtraInfo.ToString();
                 archiveEntry.ExtraInfoBin = buffBytes;
                 filesList.Add(archiveEntry);
             }
-            this.ExtraInfo = "WARNING - The unknown 'Buffer' value will only be preserved when REPLACING files.";
+            ExtraInfo = "WARNING - The unknown 'Buffer' value will only be preserved when REPLACING files.";
             return filesList;
         }
 
@@ -73,7 +75,7 @@ namespace LibrarianTool.Domain.Archives
                 var buff = new byte[19];
                 loadStream.Position = offset;
                 loadStream.Read(buff, 0, buff.Length);
-                if (Encoding.ASCII.GetString(buff).Equals("Creative Voice File"))
+                if (Encoding.ASCII.GetString(buff).Equals("Creative Voice File", StringComparison.Ordinal))
                 {
                     sbExtraInfo.Append("\nType: Creative Voice File");
                     isVoc = true;
@@ -84,7 +86,7 @@ namespace LibrarianTool.Domain.Archives
                 var buff = new byte[8];
                 loadStream.Position = offset;
                 loadStream.Read(buff, 0, buff.Length);
-                if (Encoding.ASCII.GetString(buff, 0, 4).Equals("CTMF"))
+                if (Encoding.ASCII.GetString(buff, 0, 4).Equals("CTMF", StringComparison.Ordinal))
                 {
                     sbExtraInfo.Append("\nType: Creative Music Format");
                 }
@@ -105,12 +107,12 @@ namespace LibrarianTool.Domain.Archives
             else
             {
                 entry = new ArchiveEntry(filePath, internalFilename);
-                extraInfoBin = this._filesList[foundIndex].ExtraInfoBin;
+                extraInfoBin = FilesList[foundIndex].ExtraInfoBin;
             }
             if (extraInfoBin != null && extraInfoBin.Length >= 4)
             {
                 var buff = (uint)ArrayUtils.ReadIntFromByteArray(extraInfoBin.AsSpan(0, 4), true);
-                sb.Append(string.Format(BufferInfoFormat, buff));
+                sb.Append(string.Format(CultureInfo.InvariantCulture, BufferInfoFormat, buff));
             }
             using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             {
@@ -119,9 +121,9 @@ namespace LibrarianTool.Domain.Archives
             entry.ExtraInfo = sb.ToString();
             entry.ExtraInfoBin = extraInfoBin;
             if (foundIndex == -1)
-                this._filesList.Add(entry);
+                FilesList.Add(entry);
             else
-                this._filesList[foundIndex] = entry;
+                FilesList[foundIndex] = entry;
             return entry;
         }
 
@@ -135,13 +137,13 @@ namespace LibrarianTool.Domain.Archives
         public override bool SaveArchive(Archive archive, Stream saveStream, string savePath)
         {
             var filesList = archive.FilesList.ToList();
-            this.OrderFilesListInternal(filesList);
+            OrderFilesListInternal(filesList);
             var nrOfFiles = filesList.Count;
             var firstFileOffset = 2 + 25 * nrOfFiles;
             var fileOffset = firstFileOffset;
             var enc = Encoding.GetEncoding(437);
             var nameBuffer = new byte[13];
-            using (var bw = new BinaryWriter(new NonDisposingStream(saveStream)))
+            using (var bw = new BinaryWriter(saveStream, Encoding.UTF8, true))
             {
                 bw.Write((ushort)nrOfFiles);
                 foreach (var entry in filesList)
@@ -154,7 +156,7 @@ namespace LibrarianTool.Domain.Archives
                         if (!fi.Exists)
                             throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
                         fileLength = (int)fi.Length;
-                        curName = this.GetInternalFilename(entry.FileName);
+                        curName = GetInternalFilename(entry.FileName);
                     }
                     bw.Write(fileLength);
                     var buff = 0u;
@@ -174,7 +176,7 @@ namespace LibrarianTool.Domain.Archives
                 }
             }
             if (firstFileOffset != saveStream.Position)
-                throw new IndexOutOfRangeException("Programmer error: write start offset does not match end of index.");
+                throw new ArchiveException("Programmer error: write start offset does not match end of index.");
             foreach (var entry in filesList)
                 CopyEntryContentsToStream(entry, saveStream);
             return true;

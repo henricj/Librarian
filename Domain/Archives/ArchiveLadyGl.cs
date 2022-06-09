@@ -28,12 +28,12 @@ namespace LibrarianTool.Domain.Archives
             var curStreamName = archivePath;
             string secondStreamName;
             bool secondStreamIsContent;
-            if (".GLT".Equals(ext, StringComparison.InvariantCultureIgnoreCase))
+            if (".GLT".Equals(ext, StringComparison.OrdinalIgnoreCase))
             {
                 secondStreamIsContent = true;
                 secondStreamName = baseName + ".GL";
             }
-            else if (".GL".Equals(ext, StringComparison.InvariantCultureIgnoreCase))
+            else if (".GL".Equals(ext, StringComparison.OrdinalIgnoreCase))
             {
                 secondStreamIsContent = false;
                 secondStreamName = baseName + ".GLT";
@@ -60,8 +60,8 @@ namespace LibrarianTool.Domain.Archives
             var tableData = secondStreamIsContent ? loadStream : secondStream;
             var archiveData = secondStreamIsContent ? secondStream : loadStream;
             var archiveDataName = secondStreamIsContent ? secondStreamName : curStreamName;
-            this.FileName = secondStreamIsContent ? curStreamName : secondStreamName;
-            this.ExtraInfo = "Data archive: " + Path.GetFileName(archiveDataName);
+            FileName = secondStreamIsContent ? curStreamName : secondStreamName;
+            ExtraInfo = "Data archive: " + Path.GetFileName(archiveDataName);
 
             var tableLength = (int)tableData.Length;
             var dataLength = (int)archiveData.Length;
@@ -117,7 +117,7 @@ namespace LibrarianTool.Domain.Archives
         {
             if (savePath == null)
                 throw new ArgumentException("This type needs a filename since it writes its data to an accompanying file.");
-            if (".GL".Equals(Path.GetExtension(savePath)))
+            if (".GL".Equals(Path.GetExtension(savePath), StringComparison.Ordinal))
                 throw new ArgumentException("Suggested name cannot have extension \".gl\"; it is reserved for the data file.");
             var entries = archive.FilesList.ToArray();
             var nrOfEntries = entries.Length;

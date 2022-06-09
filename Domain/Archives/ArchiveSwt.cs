@@ -1,6 +1,7 @@
 ﻿using Nyerguds.Util;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -80,7 +81,7 @@ namespace LibrarianTool.Domain.Archives
                 {
                     ExtraInfoBin = buffer,
                     Date = dt,
-                    ExtraInfo = "Folder ID: " + folderId.ToString("X4") + ", file index: " + index + "\n"
+                    ExtraInfo = "Folder ID: " + folderId.ToString("X4", CultureInfo.InvariantCulture) + ", file index: " + index + "\n"
                 };
 
                 if (newFolder && !folders.ContainsKey(folderId))

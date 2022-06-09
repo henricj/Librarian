@@ -52,109 +52,109 @@ namespace Nyerguds.GameData.Dynamix
             int i;
 
             for (i = N + 1; i <= N + 256; i++)
-                this._rson[i] = Nil; /* root */
+                _rson[i] = Nil; /* root */
             for (i = 0; i < N; i++)
-                this._dad[i] = Nil; /* node */
+                _dad[i] = Nil; /* node */
         }
 
         void InsertNode(int r) /* insert to tree */
         {
             var cmp = 1;
             var key = r;
-            var p = N + 1 + this._textBuf[key];
-            this._rson[r] = this._lson[r] = Nil;
-            this._matchLength = 0;
+            var p = N + 1 + _textBuf[key];
+            _rson[r] = _lson[r] = Nil;
+            _matchLength = 0;
             for (; ; )
             {
                 if (cmp >= 0)
                 {
-                    if (this._rson[p] != Nil)
-                        p = this._rson[p];
+                    if (_rson[p] != Nil)
+                        p = _rson[p];
                     else
                     {
-                        this._rson[p] = r;
-                        this._dad[r] = p;
+                        _rson[p] = r;
+                        _dad[r] = p;
                         return;
                     }
                 }
                 else
                 {
-                    if (this._lson[p] != Nil)
-                        p = this._lson[p];
+                    if (_lson[p] != Nil)
+                        p = _lson[p];
                     else
                     {
-                        this._lson[p] = r;
-                        this._dad[r] = p;
+                        _lson[p] = r;
+                        _dad[r] = p;
                         return;
                     }
                 }
                 int i;
                 for (i = 1; i < F; i++)
-                    if ((cmp = this._textBuf[key + i] - this._textBuf[p + i]) != 0)
+                    if ((cmp = _textBuf[key + i] - _textBuf[p + i]) != 0)
                         break;
                 if (i > Threshold)
                 {
-                    if (i > this._matchLength)
+                    if (i > _matchLength)
                     {
-                        this._matchPosition = ((r - p) & (N - 1)) - 1;
-                        if ((this._matchLength = i) >= F)
+                        _matchPosition = ((r - p) & (N - 1)) - 1;
+                        if ((_matchLength = i) >= F)
                             break;
                     }
-                    if (i == this._matchLength)
+                    if (i == _matchLength)
                     {
                         uint c;
-                        if ((c = (uint)((r - p) & (N - 1)) - 1) < (uint)this._matchPosition)
+                        if ((c = (uint)((r - p) & (N - 1)) - 1) < (uint)_matchPosition)
                         {
-                            this._matchPosition = (int)c;
+                            _matchPosition = (int)c;
                         }
                     }
                 }
             }
-            this._dad[r] = this._dad[p];
-            this._lson[r] = this._lson[p];
-            this._rson[r] = this._rson[p];
-            this._dad[this._lson[p]] = r;
-            this._dad[this._rson[p]] = r;
-            if (this._rson[this._dad[p]] == p)
-                this._rson[this._dad[p]] = r;
+            _dad[r] = _dad[p];
+            _lson[r] = _lson[p];
+            _rson[r] = _rson[p];
+            _dad[_lson[p]] = r;
+            _dad[_rson[p]] = r;
+            if (_rson[_dad[p]] == p)
+                _rson[_dad[p]] = r;
             else
-                this._lson[this._dad[p]] = r;
-            this._dad[p] = Nil; /* remove p */
+                _lson[_dad[p]] = r;
+            _dad[p] = Nil; /* remove p */
         }
 
         void DeleteNode(int p) /* remove from tree */
         {
             int q;
 
-            if (this._dad[p] == Nil)
+            if (_dad[p] == Nil)
                 return; /* not registered */
-            if (this._rson[p] == Nil)
-                q = this._lson[p];
-            else if (this._lson[p] == Nil)
-                q = this._rson[p];
+            if (_rson[p] == Nil)
+                q = _lson[p];
+            else if (_lson[p] == Nil)
+                q = _rson[p];
             else
             {
-                q = this._lson[p];
-                if (this._rson[q] != Nil)
+                q = _lson[p];
+                if (_rson[q] != Nil)
                 {
                     do
                     {
-                        q = this._rson[q];
-                    } while (this._rson[q] != Nil);
-                    this._rson[this._dad[q]] = this._lson[q];
-                    this._dad[this._lson[q]] = this._dad[q];
-                    this._lson[q] = this._lson[p];
-                    this._dad[this._lson[p]] = q;
+                        q = _rson[q];
+                    } while (_rson[q] != Nil);
+                    _rson[_dad[q]] = _lson[q];
+                    _dad[_lson[q]] = _dad[q];
+                    _lson[q] = _lson[p];
+                    _dad[_lson[p]] = q;
                 }
-                this._rson[q] = this._rson[p];
-                this._dad[this._rson[p]] = q;
+                _rson[q] = _rson[p];
+                _dad[_rson[p]] = q;
             }
-            this._dad[q] = this._dad[p];
-            if (this._rson[this._dad[p]] == p)
-                this._rson[this._dad[p]] = q;
+            _dad[q] = _dad[p];
+            if (_rson[_dad[p]] == p)
+                _rson[_dad[p]] = q;
             else
-                this._lson[this._dad[p]] = q;
-            this._dad[p] = Nil;
+                _lson[_dad[p]] = q;
+            _dad[p] = Nil;
         }
 
         /* Huffman coding */
@@ -255,16 +255,16 @@ namespace Nyerguds.GameData.Dynamix
         int GetBit() /* get one bit */
         {
             uint i;
-            while (this._getlen <= 8)
+            while (_getlen <= 8)
             {
-                if ((int)(i = this.get_bits_left(8)) < 0)
+                if ((int)(i = get_bits_left(8)) < 0)
                     i = 0;
-                this._getbuf |= (i << (8 - this._getlen));
-                this._getlen += 8;
+                _getbuf |= (i << (8 - _getlen));
+                _getlen += 8;
             }
-            i = this._getbuf;
-            this._getbuf <<= 1;
-            this._getlen--;
+            i = _getbuf;
+            _getbuf <<= 1;
+            _getlen--;
             return (int)((i & 0x8000) >> 15);
         }
 
@@ -272,15 +272,15 @@ namespace Nyerguds.GameData.Dynamix
         {
             uint i;
 
-            while (this._getlen <= 8)
+            while (_getlen <= 8)
             {
-                if ((int)(i = this.get_bits_left(8)) < 0) i = 0;
-                this._getbuf |= i << (8 - this._getlen);
-                this._getlen += 8;
+                if ((int)(i = get_bits_left(8)) < 0) i = 0;
+                _getbuf |= i << (8 - _getlen);
+                _getlen += 8;
             }
-            i = this._getbuf;
-            this._getbuf <<= 8;
-            this._getlen -= 8;
+            i = _getbuf;
+            _getbuf <<= 8;
+            _getlen -= 8;
             return (int)((i & 0xff00) >> 8);
         }
 
@@ -293,22 +293,22 @@ namespace Nyerguds.GameData.Dynamix
 
             for (var index = 0; index < NChar; index++)
             {
-                this._freq[index] = 1;
-                this._son[index] = index + T;
-                this._prnt[index + T] = index;
+                _freq[index] = 1;
+                _son[index] = index + T;
+                _prnt[index + T] = index;
             }
             var i = 0;
             var j = NChar;
             while (j <= R)
             {
-                this._freq[j] = this._freq[i] + this._freq[i + 1];
-                this._son[j] = i;
-                this._prnt[i] = this._prnt[i + 1] = j;
+                _freq[j] = _freq[i] + _freq[i + 1];
+                _son[j] = i;
+                _prnt[i] = _prnt[i + 1] = j;
                 i += 2;
                 j++;
             }
-            this._freq[T] = 0xffff;
-            this._prnt[R] = 0;
+            _freq[T] = 0xffff;
+            _prnt[R] = 0;
         }
 
 
@@ -323,10 +323,10 @@ namespace Nyerguds.GameData.Dynamix
             int k;
             for (var i = 0; i < T; i++)
             {
-                if (this._son[i] >= T)
+                if (_son[i] >= T)
                 {
-                    this._freq[j] = (this._freq[i] + 1) / 2;
-                    this._son[j] = this._son[i];
+                    _freq[j] = (_freq[i] + 1) / 2;
+                    _son[j] = _son[i];
                     j++;
                 }
             }
@@ -335,25 +335,25 @@ namespace Nyerguds.GameData.Dynamix
             for (var i = 0; j < T; i += 2, j++)
             {
                 k = i + 1;
-                var f = this._freq[j] = this._freq[i] + this._freq[k];
-                for (k = j - 1; f < this._freq[k]; k--) ;
+                var f = _freq[j] = _freq[i] + _freq[k];
+                for (k = j - 1; f < _freq[k]; k--) ;
                 k++;
                 var l = (uint)(j - k) * 2;
-                Array.Copy(this._freq, k, this._freq, k + 1, l);
-                this._freq[k] = f;
-                Array.Copy(this._son, k, this._son, k + 1, l);
-                this._son[k] = i;
+                Array.Copy(_freq, k, _freq, k + 1, l);
+                _freq[k] = f;
+                Array.Copy(_son, k, _son, k + 1, l);
+                _son[k] = i;
             }
             /* connect prnt */
             for (var i = 0; i < T; i++)
             {
-                if ((k = this._son[i]) >= T)
+                if ((k = _son[i]) >= T)
                 {
-                    this._prnt[k] = i;
+                    _prnt[k] = i;
                 }
                 else
                 {
-                    this._prnt[k] = this._prnt[k + 1] = i;
+                    _prnt[k] = _prnt[k + 1] = i;
                 }
             }
         }
@@ -362,53 +362,53 @@ namespace Nyerguds.GameData.Dynamix
 
         void Update(int c)
         {
-            if (this._freq[R] == MaxFreq)
+            if (_freq[R] == MaxFreq)
             {
-                this.Reconst();
+                Reconst();
             }
-            c = this._prnt[c + T];
+            c = _prnt[c + T];
             do
             {
-                var k = (int)(++this._freq[c]);
+                var k = (int)(++_freq[c]);
                 /* if the order is disturbed, exchange nodes */
                 int l;
-                if ((uint)k <= this._freq[l = c + 1])
+                if ((uint)k <= _freq[l = c + 1])
                     continue;
-                while ((uint)k > this._freq[++l]) ;
+                while ((uint)k > _freq[++l]) ;
                 l--;
-                this._freq[c] = this._freq[l];
-                this._freq[l] = (uint)k;
+                _freq[c] = _freq[l];
+                _freq[l] = (uint)k;
 
-                var i = this._son[c];
-                this._prnt[i] = l;
-                if (i < T) this._prnt[i + 1] = l;
+                var i = _son[c];
+                _prnt[i] = l;
+                if (i < T) _prnt[i + 1] = l;
 
-                var j = this._son[l];
-                this._son[l] = i;
+                var j = _son[l];
+                _son[l] = i;
 
-                this._prnt[j] = c;
-                if (j < T) this._prnt[j + 1] = c;
-                this._son[c] = j;
+                _prnt[j] = c;
+                if (j < T) _prnt[j + 1] = c;
+                _son[c] = j;
 
                 c = l;
-            } while ((c = this._prnt[c]) != 0); /* repeat up to root */
+            } while ((c = _prnt[c]) != 0); /* repeat up to root */
         }
 
 
         int DecodeByte()
         {
-            var c = (uint)this._son[R];
+            var c = (uint)_son[R];
 
             /* travel from root to leaf, */
             /* choosing the smaller child node (son[]) if the read bit is 0, */
             /* the bigger (son[]+1} if 1 */
             while (c < T)
             {
-                c += (uint)this.GetBit();
-                c = (uint)this._son[c];
+                c += (uint)GetBit();
+                c = (uint)_son[c];
             }
             c -= T;
-            this.Update((int)c);
+            Update((int)c);
             return (int)c;
         }
 
@@ -418,15 +418,15 @@ namespace Nyerguds.GameData.Dynamix
             uint i, j, c;
 
             /* recover upper 6 bits from table */
-            i = (uint)this.GetByte();
-            c = (uint)this._dCode[i] << 6;
-            j = this._dLen[i];
+            i = (uint)GetByte();
+            c = (uint)_dCode[i] << 6;
+            j = _dLen[i];
 
             /* read lower 6 bits verbatim */
             j -= 2;
             while (j-- != 0)
             {
-                i = (uint)((i << 1) + this.GetBit());
+                i = (uint)((i << 1) + GetBit());
             }
             return (int)(c | (i & 0x3f));
         }
@@ -434,19 +434,19 @@ namespace Nyerguds.GameData.Dynamix
 
         void Reset()
         {
-            this.InitTree();
-            this._getlen = 0;
-            this._getbuf = 0;
+            InitTree();
+            _getlen = 0;
+            _getbuf = 0;
         }
 
 
         public byte[] Decode(byte[] input, int? startOffset, int? endOffset, int decompressedSize)
         {
-            this.buf_in = input;
-            this.buf_ptr = startOffset ?? 0;
-            this.buf_end = endOffset ?? input.Length;
-            this.bits_size = 0;
-            this.bits_data = 0;
+            buf_in = input;
+            buf_ptr = startOffset ?? 0;
+            buf_end = endOffset ?? input.Length;
+            bits_size = 0;
+            bits_data = 0;
 
 
             uint outPtr = 0;
@@ -454,36 +454,36 @@ namespace Nyerguds.GameData.Dynamix
             var bufOut = new byte[decompressedSize];
             if (len == 0)
                 return Array.Empty<byte>();
-            this.Reset();
-            this.StartHuff();
+            Reset();
+            StartHuff();
             for (var i = 0; i < N - F; i++)
-                this._textBuf[i] = 0x20;
+                _textBuf[i] = 0x20;
             var r = N - F;
             for (uint count = 0; count < len;)
             {
                 if (outPtr >= decompressedSize)
                     return bufOut;
-                var c = this.DecodeByte();
+                var c = DecodeByte();
                 if (c < 256)
                 {
                     bufOut[outPtr++] = (byte)c;
 
-                    this._textBuf[r++] = (byte)c;
+                    _textBuf[r++] = (byte)c;
                     r &= (N - 1);
                     count++;
                 }
                 else
                 {
-                    var i = (r - this.DecodePosition() - 1) & (N - 1);
+                    var i = (r - DecodePosition() - 1) & (N - 1);
                     var j = c - 255 + Threshold;
                     int k;
                     for (k = 0; k < j; k++)
                     {
-                        c = this._textBuf[(i + k) & (N - 1)];
+                        c = _textBuf[(i + k) & (N - 1)];
                         if (outPtr >= decompressedSize)
                             return bufOut;
                         bufOut[outPtr++] = (byte)c;
-                        this._textBuf[r++] = (byte)c;
+                        _textBuf[r++] = (byte)c;
                         r &= (N - 1);
                         count++;
                     }
@@ -512,28 +512,28 @@ namespace Nyerguds.GameData.Dynamix
             while (numBits > 0)
             {
                 // ERROR!
-                if (this.buf_ptr >= this.buf_end)
+                if (buf_ptr >= buf_end)
                     return uint.MaxValue;
 
                 // 8-bit buffer
-                if (this.bits_size == 0)
+                if (bits_size == 0)
                 {
-                    this.bits_size = 8;
-                    this.bits_data = this.buf_in[this.buf_ptr++];
+                    bits_size = 8;
+                    bits_data = buf_in[buf_ptr++];
                 }
                 // consume cached bits
                 var useBits = numBits;
                 if (useBits > 8) useBits = 8;
-                if (useBits > this.bits_size)
-                    useBits = this.bits_size;
+                if (useBits > bits_size)
+                    useBits = bits_size;
 
                 // tack on bits
                 data <<= (int)useBits;
-                data |= (uint)((this.bits_data >> (int)(this.bits_size - useBits)) & bitsMask[useBits]);
+                data |= (uint)((bits_data >> (int)(bits_size - useBits)) & bitsMask[useBits]);
 
                 // update cache data
                 numBits -= useBits;
-                this.bits_size -= (byte)useBits;
+                bits_size -= (byte)useBits;
             }
             return data;
         }

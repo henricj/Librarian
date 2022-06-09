@@ -12,16 +12,16 @@ namespace Nyerguds.GameData.Dynamix
         public bool IsContainer { get; set; }
         public byte[] Data
         {
-            get => this.m_data;
+            get => m_data;
             set
             {
                 var dataCopy = new byte[value.Length];
                 Array.Copy(value, 0, dataCopy, 0, value.Length);
-                this.m_data = dataCopy;
+                m_data = dataCopy;
             }
         }
-        public int Length => this.Data.Length + 8;
-        public int DataLength => this.Data.Length;
+        public int Length => Data.Length + 8;
+        public int DataLength => Data.Length;
 
         byte[] m_data;
 
@@ -33,7 +33,7 @@ namespace Nyerguds.GameData.Dynamix
         {
             if (identifier.Length != 3 || Encoding.UTF8.GetBytes(identifier).Length != 3)
                 throw new ArgumentException("Identifier must be a 3 ASCII characters!", nameof(identifier));
-            this.Identifier = identifier;
+            Identifier = identifier;
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Nyerguds.GameData.Dynamix
         public DynamixChunk(string identifier, byte[] data)
             : this(identifier)
         {
-            this.Data = data;
+            Data = data;
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Nyerguds.GameData.Dynamix
             fullData[0] = compressionType;
             ArrayUtils.WriteIntToByteArray(fullData, 1, 4, true, uncompressedSize);
             data.CopyTo(fullData.AsSpan(5));
-            this.m_data = fullData;
+            m_data = fullData;
         }
 
         /// <summary>
@@ -70,8 +70,8 @@ namespace Nyerguds.GameData.Dynamix
         /// <returns>The full chunk as byte array.</returns>
         public byte[] WriteChunk()
         {
-            var data = new byte[this.Length];
-            this.WriteChunk(data, 0);
+            var data = new byte[Length];
+            WriteChunk(data, 0);
             return data;
         }
 
@@ -83,14 +83,14 @@ namespace Nyerguds.GameData.Dynamix
         /// <returns>The offset right behind the written data in the target array.</returns>
         public int WriteChunk(byte[] target, int offset)
         {
-            Array.Copy(Encoding.ASCII.GetBytes(this.Identifier + ":"), 0, target, offset, 4);
+            Array.Copy(Encoding.ASCII.GetBytes(Identifier + ":"), 0, target, offset, 4);
             offset += 4;
-            ArrayUtils.WriteIntToByteArray(target, offset, 4, true, (uint)(this.DataLength));
+            ArrayUtils.WriteIntToByteArray(target, offset, 4, true, (uint)(DataLength));
             offset += 4;
-            if (this.IsContainer)
+            if (IsContainer)
                 target[offset - 1] |= 0x80;
-            Array.Copy(this.Data, 0, target, offset, this.DataLength);
-            return offset + this.DataLength;
+            Array.Copy(Data, 0, target, offset, DataLength);
+            return offset + DataLength;
         }
 
         /// <summary>

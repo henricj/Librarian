@@ -20,9 +20,9 @@ namespace Nyerguds.GameData.Dynamix
             if (seqLen == 1)
                 return sequence[0];
             // 256 is not used; it's the "reset" code.
-            for (var i = 257; i < this.dictKeys.Count; i++)
+            for (var i = 257; i < dictKeys.Count; i++)
             {
-                var check = this.dictKeys[i];
+                var check = dictKeys[i];
                 if (seqLen != check.Length)
                     continue;
                 var noMatch = false;
@@ -42,22 +42,22 @@ namespace Nyerguds.GameData.Dynamix
 
         bool ContainsCode(byte[] sequence)
         {
-            return this.GetCode(sequence) != -1;
+            return GetCode(sequence) != -1;
         }
 
         public DynamixLzwEncoder()
         {
             for (var i = 0; i < 256; i++)
             {
-                this.dictKeys.Add(new[] { (byte)i });
-                this.dictCodes.Add(i);
+                dictKeys.Add(new[] { (byte)i });
+                dictCodes.Add(i);
             }
             // Reset code
-            this.dictKeys.Add(null);
-            this.dictCodes.Add(256);
+            dictKeys.Add(null);
+            dictCodes.Add(256);
         }
 
-        public byte[] Compress(byte[] buffer)
+        public byte[] Compress(ReadOnlySpan<byte> buffer)
         {
             var codeLen = 9;
             var bitIndex = 0;
@@ -93,24 +93,24 @@ namespace Nyerguds.GameData.Dynamix
                 var oldLen = match.Length;
                 var nextMatch = new byte[oldLen + 1];
                 nextMatch[oldLen] = b;
-                if (this.ContainsCode(nextMatch))
+                if (ContainsCode(nextMatch))
                     match = nextMatch;
                 else
                 {
-                    var code = this.GetCode(match);
+                    var code = GetCode(match);
                     // Add current code to list
-                    compressed[index++] = this.dictCodes[code];
+                    compressed[index++] = dictCodes[code];
                     // new sequence; add it to the dictionary
-                    this.dictKeys.Add(nextMatch.ToArray());
-                    this.dictCodes.Add(this.dictCodes.Count);
+                    dictKeys.Add(nextMatch.ToArray());
+                    dictCodes.Add(dictCodes.Count);
                     match = new[] { b };
                 }
             }
             // write remaining output if necessary
             if (match.Length > 0)
             {
-                var code = this.GetCode(match);
-                compressed[index++] = this.dictCodes[code];
+                var code = GetCode(match);
+                compressed[index++] = dictCodes[code];
             }
             var finalCodes = new int[index];
             Array.Copy(compressed, 0, finalCodes, 0, index);

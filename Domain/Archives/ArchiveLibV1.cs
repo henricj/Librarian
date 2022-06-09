@@ -18,7 +18,7 @@ namespace LibrarianTool.Domain.Archives
 
         protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
         {
-            var files = this.GetFilesCount(loadStream, IdBytesLib);
+            var files = GetFilesCount(loadStream, IdBytesLib);
             return LoadLibArchive(loadStream, files, archivePath);
         }
 
@@ -26,11 +26,11 @@ namespace LibrarianTool.Domain.Archives
         {
             loadStream.Position = 0;
             if (loadStream.Length < idBytes.Length + 2)
-                throw new FileTypeLoadException("Too short to be a " + this.ShortTypeDescription + " archive.");
+                throw new FileTypeLoadException("Too short to be a " + ShortTypeDescription + " archive.");
             var testArray = new byte[idBytes.Length];
             loadStream.Read(testArray, 0, testArray.Length);
             if (!testArray.SequenceEqual(idBytes))
-                throw new FileTypeLoadException("Not a " + this.ShortTypeDescription + " archive.");
+                throw new FileTypeLoadException("Not a " + ShortTypeDescription + " archive.");
             var files = loadStream.ReadByte() | (loadStream.ReadByte() << 8);
             if (files == 0)
                 throw new FileTypeLoadException("No files in archive.");
@@ -78,7 +78,7 @@ namespace LibrarianTool.Domain.Archives
         public override bool SaveArchive(Archive archive, Stream saveStream, string savePath)
         {
             SaveHeader(archive, saveStream, IdBytesLib);
-            return this.SaveLibArchive(archive, saveStream);
+            return SaveLibArchive(archive, saveStream);
         }
 
         protected static void SaveHeader(Archive archive, Stream saveStream, byte[] idBytes)
@@ -106,7 +106,7 @@ namespace LibrarianTool.Domain.Archives
                         throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
                     fileLength = (int)fi.Length;
                 }
-                var curName = this.GetInternalFilename(entry.FileName);
+                var curName = GetInternalFilename(entry.FileName);
                 var copySize = Math.Min(curName.Length, 12);
                 Array.Copy(enc.GetBytes(curName), 0, buffer, 0, copySize);
                 for (var b = copySize; b <= 13; b++)

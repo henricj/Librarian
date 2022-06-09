@@ -14,7 +14,7 @@ namespace LibrarianTool.Domain.Archives
 
         protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
         {
-            var files = this.GetFilesCount(loadStream, IdBytesLic);
+            var files = GetFilesCount(loadStream, IdBytesLic);
             var skip = 8 * (files + 1);
             if (loadStream.Position + skip >= loadStream.Length)
                 throw new FileTypeLoadException("File too short for full header.");
@@ -27,7 +27,7 @@ namespace LibrarianTool.Domain.Archives
         {
             SaveHeader(archive, saveStream, IdBytesLic);
             saveStream.Position += 8 * (archive.FilesList.Count + 1);
-            return this.SaveLibArchive(archive, saveStream);
+            return SaveLibArchive(archive, saveStream);
         }
     }
 }

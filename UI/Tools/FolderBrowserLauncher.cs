@@ -4,6 +4,18 @@ using System.Windows.Forms;
 
 namespace Nyerguds.Util.UI
 {
+    internal static class NativeMethods
+    {
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetDlgItem(IntPtr hDlg, int nIDDlgItem);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+    }
+
     public static class FolderBrowserLauncher
     {
         /// <summary>
@@ -19,15 +31,6 @@ namespace Nyerguds.Util.UI
         /// </summary>
         const int _dlgItemBrowseControl = 0;
         const int _dlgItemTreeView = 100;
-
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-        [DllImport("user32.dll")]
-        static extern IntPtr GetDlgItem(IntPtr hDlg, int nIDDlgItem);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         /// <summary>
         /// Some of the messages that the Tree View control will respond to
@@ -70,20 +73,20 @@ namespace Nyerguds.Util.UI
                 if (retries > 0)
                 {
                     --retries;
-                    var hwndDlg = FindWindow(null, _topLevelSearchString);
+                    var hwndDlg = NativeMethods.FindWindow(null, _topLevelSearchString);
                     if (hwndDlg != IntPtr.Zero)
                     {
-                        var hwndFolderCtrl = GetDlgItem(hwndDlg, _dlgItemBrowseControl);
+                        var hwndFolderCtrl = NativeMethods.GetDlgItem(hwndDlg, _dlgItemBrowseControl);
                         if (hwndFolderCtrl != IntPtr.Zero)
                         {
-                            var hwndTV = GetDlgItem(hwndFolderCtrl, _dlgItemTreeView);
+                            var hwndTV = NativeMethods.GetDlgItem(hwndFolderCtrl, _dlgItemTreeView);
 
                             if (hwndTV != IntPtr.Zero)
                             {
-                                var item = SendMessage(hwndTV, TVM_GETNEXTITEM, new IntPtr(TVGN_CARET), IntPtr.Zero);
+                                var item = NativeMethods.SendMessage(hwndTV, TVM_GETNEXTITEM, new IntPtr(TVGN_CARET), IntPtr.Zero);
                                 if (item != IntPtr.Zero)
                                 {
-                                    SendMessage(hwndTV, TVM_ENSUREVISIBLE, IntPtr.Zero, item);
+                                    NativeMethods.SendMessage(hwndTV, TVM_ENSUREVISIBLE, IntPtr.Zero, item);
                                     retries = 0;
                                     t.Stop();
                                     if (selectTree)

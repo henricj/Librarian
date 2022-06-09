@@ -56,8 +56,8 @@ namespace LibrarianTool.Domain.Archives
 
             foreach (var entry in archive.FilesList)
             {
-                var filename = this.GetInternalFilename(entry.FileName);
-                enc.GetBytes(this.FileName, 0, 12, buffer, 0);
+                var filename = GetInternalFilename(entry.FileName);
+                enc.GetBytes(FileName, 0, 12, buffer, 0);
                 for (var b = filename.Length; b <= 13; b++)
                     buffer[b] = 0;
                 ArrayUtils.WriteIntToByteArray(buffer, 0x0D, 4, true, (ulong)entry.Length);

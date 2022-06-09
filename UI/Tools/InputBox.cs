@@ -10,17 +10,17 @@ namespace Nyerguds.Util.UI
     {
         InputBox()
         {
-            this.InitializeComponent();
+            InitializeComponent();
         }
 
         void buttonCancel_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         void buttonOK_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using Nyerguds.Util;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -40,7 +41,7 @@ namespace LibrarianTool.Domain.Archives
             {
                 loadStream.Position = startIndex; // skip the separator
                 var isRpc2 = loadStream.MatchAtCurrentPos(Rpc2IdBytes);
-                var filename = baseName + fileNamecounter.ToString("0000");
+                var filename = baseName + fileNamecounter.ToString("0000", CultureInfo.InvariantCulture);
                 ++fileNamecounter;
                 var extension = isRpc2 ? "rpyc" : MimeTypeDetector.GetMimeType(loadStream)[0];
                 separatorFound = loadStream.JumpToNextMatch(SeparatorBytesLib, 0x80);

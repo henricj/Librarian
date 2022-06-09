@@ -1,6 +1,8 @@
-﻿using Nyerguds.Util;
+﻿using LibrarianTool.Domain.Utils;
+using Nyerguds.Util;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -32,8 +34,8 @@ namespace LibrarianTool.Domain.Archives
         protected ArchivePak(PakVersion version)
         {
             PakVer = version;
-            ShortTypeName = "Westwood PAK Archive v" + (int)this.PakVer;
-            ShortTypeDescription = "Westwood PAK v" + (int)this.PakVer;
+            ShortTypeName = "Westwood PAK Archive v" + (int)PakVer;
+            ShortTypeDescription = "Westwood PAK v" + (int)PakVer;
         }
 
         protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
@@ -43,7 +45,7 @@ namespace LibrarianTool.Domain.Archives
                 throw new FileTypeLoadException("Archive not long enough for a single entry.");
             Span<byte> addressBuffer = stackalloc byte[4];
             loadStream.Position = 0;
-            this.ExtraInfo = string.Empty;
+            ExtraInfo = string.Empty;
             ArchiveEntry curEntry = null;
             var minOffs = end;
             // Need at least the address plus one byte for a 0-terminated name.
@@ -63,20 +65,20 @@ namespace LibrarianTool.Domain.Archives
                 if (address == 0)
                 {
                     foundNullAddress = true;
-                    if (curEntry is { Length: -1 } && this.PakVer == PakVersion.PakVersion2)
+                    if (curEntry is { Length: -1 } && PakVer == PakVersion.PakVersion2)
                         curEntry.Length = (int)end - curEntry.StartOffset;
                 }
-                if (address == end && this.PakVer == PakVersion.PakVersion1)
+                if (address == end && PakVer == PakVersion.PakVersion1)
                 {
                     foundEndAddress = true;
                     if (curEntry is { Length: -1 })
                         curEntry.Length = (int)end - curEntry.StartOffset;
                 }
-                if (this.PakVer == PakVersion.PakVersion3 && foundNullName && foundEndAddressEntryV3 && foundNullAddress)
+                if (PakVer == PakVersion.PakVersion3 && foundNullName && foundEndAddressEntryV3 && foundNullAddress)
                     break;
-                if (this.PakVer == PakVersion.PakVersion2 && foundNullAddress)
+                if (PakVer == PakVersion.PakVersion2 && foundNullAddress)
                     break;
-                if (this.PakVer == PakVersion.PakVersion1 && foundEndAddress)
+                if (PakVer == PakVersion.PakVersion1 && foundEndAddress)
                     break;
                 if (loadStream.Position == minOffs)
                     break;
@@ -110,7 +112,7 @@ namespace LibrarianTool.Domain.Archives
                 if (curName.Length == 0)
                 {
                     foundNullName = true;
-                    if ((curEntry == null || (curEntry.Length == -1 && address > curEntry.StartOffset)) && address != 0 && address <= end && this.PakVer == PakVersion.PakVersion3)
+                    if ((curEntry == null || (curEntry.Length == -1 && address > curEntry.StartOffset)) && address != 0 && address <= end && PakVer == PakVersion.PakVersion3)
                     {
                         foundEndAddressEntryV3 = true;
                         if (curEntry != null)
@@ -126,9 +128,9 @@ namespace LibrarianTool.Domain.Archives
             }
 
             if (foundLongFileName)
-                this.ExtraInfo = "File contains long file names.";
+                ExtraInfo = "File contains long file names.";
 
-            switch (this.PakVer)
+            switch (PakVer)
             {
                 case PakVersion.PakVersion3 when (!foundNullName || !foundEndAddressEntryV3 || !foundNullAddress):
                     throw new FileTypeLoadException("This is not a v3 PAK file.");
@@ -139,11 +141,11 @@ namespace LibrarianTool.Domain.Archives
                 case PakVersion.PakVersion1 when !foundEndAddress && loadStream.Position == minOffs && curEntry is { Length: -1 }:
                     // Seems to be a problem in some v1 pak files where the last entry is gibberish.
                     curEntry.Length = (int)end - curEntry.StartOffset;
-                    var warning = "File has corrupted end offset: " + address.ToString("X8");
-                    if (this.ExtraInfo == null)
-                        this.ExtraInfo = warning;
+                    var warning = "File has corrupted end offset: " + address.ToString("X8", CultureInfo.InvariantCulture);
+                    if (ExtraInfo == null)
+                        ExtraInfo = warning;
                     else
-                        this.ExtraInfo = ExtraInfo + " " + warning;
+                        ExtraInfo = ExtraInfo + " " + warning;
                     break;
             }
 
@@ -161,7 +163,7 @@ namespace LibrarianTool.Domain.Archives
             var entries = archive.FilesList.ToArray();
             // Filename lengths + version-dependent padding
             var firstFileOffset = entries.Sum(en => en.FileName.Length) + entries.Length * 5;
-            switch (this.PakVer)
+            switch (PakVer)
             {
                 case PakVersion.PakVersion1:
                 case PakVersion.PakVersion2:
@@ -192,7 +194,7 @@ namespace LibrarianTool.Domain.Archives
                             throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
                         fileLength = (int)fi.Length;
                         // not really necessary since the input method takes care of it, but, just to be sure.
-                        curName = this.GetInternalFilename(entry.FileName);
+                        curName = GetInternalFilename(entry.FileName);
                     }
                     bw.Write(fileOffset);
                     fileOffset += fileLength;
@@ -202,7 +204,7 @@ namespace LibrarianTool.Domain.Archives
                         Array.Clear(buffer, copySize, buffer.Length - copySize);
                     bw.Write(buffer, 0, copySize + 1);
                 }
-                switch (this.PakVer)
+                switch (PakVer)
                 {
                     case PakVersion.PakVersion1:
                         bw.Write(fileOffset);
@@ -218,7 +220,7 @@ namespace LibrarianTool.Domain.Archives
                 }
             }
             if (firstFileOffset != saveStream.Position)
-                throw new IndexOutOfRangeException("Programmer error: write start offset does not match end of index.");
+                throw new ArchiveException("Programmer error: write start offset does not match end of index.");
             foreach (var entry in entries)
                 CopyEntryContentsToStream(entry, saveStream);
             return true;
@@ -226,9 +228,11 @@ namespace LibrarianTool.Domain.Archives
 
         protected enum PakVersion
         {
+#pragma warning disable CA1712 // Do not prefix enum values with type name
             PakVersion1 = 1,
             PakVersion2 = 2,
             PakVersion3 = 3,
+#pragma warning restore CA1712 // Do not prefix enum values with type name
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace Nyerguds.Util
 {
@@ -21,13 +22,13 @@ namespace Nyerguds.Util
     public class FileTypeLoadException : Exception
     {
         /// <summary>USed to store the attempted load type in the Data dictionary to allow serialization.</summary>
-        protected readonly string DataAttemptedLoadedType = "AttemptedLoadedType";
+        protected static readonly string DataAttemptedLoadedType = "AttemptedLoadedType";
 
         /// <summary>File type that was attempted to be loaded and threw this exception.</summary>
         public string AttemptedLoadedType
         {
-            get => this.Data[this.DataAttemptedLoadedType] as string;
-            set => this.Data[this.DataAttemptedLoadedType] = value;
+            get => Data[DataAttemptedLoadedType] as string;
+            set => Data[DataAttemptedLoadedType] = value;
         }
 
         public FileTypeLoadException() { }
@@ -36,16 +37,21 @@ namespace Nyerguds.Util
         public FileTypeLoadException(string message, string attemptedLoadedType)
             : base(message)
         {
-            this.AttemptedLoadedType = attemptedLoadedType;
+            AttemptedLoadedType = attemptedLoadedType;
         }
         public FileTypeLoadException(string message, string attemptedLoadedType, Exception innerException)
             : base(message, innerException)
         {
-            this.AttemptedLoadedType = attemptedLoadedType;
+            AttemptedLoadedType = attemptedLoadedType;
         }
+
+        protected FileTypeLoadException(SerializationInfo serializationInfo, StreamingContext streamingContext)
+            : base(serializationInfo, streamingContext)
+        { }
     }
 
     /// <summary>A specific subclass for header parse failure. Can be used for distinguishing internally between different versions of a type.</summary>
+    [Serializable]
     public class HeaderParseException : FileTypeLoadException
     {
         public HeaderParseException() { }
@@ -53,5 +59,8 @@ namespace Nyerguds.Util
         public HeaderParseException(string message, Exception innerException) : base(message, innerException) { }
         public HeaderParseException(string message, string attemptedLoadedType) : base(message, attemptedLoadedType) { }
         public HeaderParseException(string message, string attemptedLoadedType, Exception innerException) : base(message, attemptedLoadedType, innerException) { }
+        protected HeaderParseException(SerializationInfo serializationInfo, StreamingContext streamingContext)
+            : base(serializationInfo, streamingContext)
+        { }
     }
 }

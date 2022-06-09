@@ -27,7 +27,7 @@ namespace LibrarianTool.Domain.Archives
             var filesList = new List<ArchiveEntry>();
             while (loadStream.Position < end)
             {
-                var fe = ReadFileFromStream(loadStream, archivePath, -1, out var fileContents);
+                var fe = ReadFileFromStream(loadStream, archivePath, -1, out _);
                 filesList.Add(fe);
             }
             return filesList;
@@ -60,15 +60,14 @@ namespace LibrarianTool.Domain.Archives
             var curName = Enc.GetString(uncompressedData.TakeWhile(x => x != 0).ToArray());
             var curNameLen = curName.Length + 1;
             var fe = new ArchiveEntry(curName, archivePath, currentChunkStart, currentChunkLength);
-            string compressionStr;
-            switch (compression)
+            var compressionStr = compression switch
             {
-                case 0: compressionStr = "Uncompressed"; break;
-                case 1: compressionStr = "RLE"; break;
-                case 2: compressionStr = "LZW"; break;
-                case 3: compressionStr = "LZSS"; break;
-                default: compressionStr = "Unknown"; break;
-            }
+                0 => "Uncompressed",
+                1 => "RLE",
+                2 => "LZW",
+                3 => "LZSS",
+                _ => "Unknown"
+            };
             fe.ExtraInfo = "Compression: " + compressionStr + "\nUncompressed size: " + (uncompressedData.Length - curNameLen);
             //loadStream.Position = currentChunkEnd;
             return fe;

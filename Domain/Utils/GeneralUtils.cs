@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -70,9 +69,9 @@ namespace Nyerguds.Util
             string path;
             // specific for windows paths starting on \ - they need the drive added to them.
             // I constructed this piece like this for possible Mono support.
-            if (!Path.IsPathRooted(relativePath) || "\\".Equals(Path.GetPathRoot(relativePath)))
+            if (!Path.IsPathRooted(relativePath) || "\\".Equals(Path.GetPathRoot(relativePath), StringComparison.Ordinal))
             {
-                if (relativePath.StartsWith(Path.DirectorySeparatorChar.ToString()))
+                if (relativePath.StartsWith(Path.DirectorySeparatorChar.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal))
                     path = Path.Combine(Path.GetPathRoot(basePath), relativePath.TrimStart(Path.DirectorySeparatorChar));
                 else
                     path = Path.Combine(basePath, relativePath);
@@ -83,7 +82,7 @@ namespace Nyerguds.Util
             var filenameStart = path.LastIndexOf(Path.DirectorySeparatorChar);
             var dirPart = path[..(filenameStart + 1)];
             var filePart = path[(filenameStart + 1)..];
-            if (filePart.Contains("*") || filePart.Contains("?"))
+            if (filePart.Contains('*') || filePart.Contains('?'))
             {
                 dirPart = Path.GetFullPath(dirPart);
                 return Path.Combine(dirPart, filePart);
@@ -124,8 +123,9 @@ namespace Nyerguds.Util
         /// <returns>String for ExtraInfo</returns>
         public static string GetDateString(DateTime datestamp)
         {
-            return "Date: " + datestamp.Year.ToString("D4") + "-" + datestamp.Month.ToString("D2") + "-" + datestamp.Day.ToString("D2") + "\n"
-                    + "Time: " + datestamp.Hour.ToString("D2") + ":" + datestamp.Minute.ToString("D2") + ":" + datestamp.Second.ToString("D2");
+            return
+                string.Format(CultureInfo.InvariantCulture, "Date: {0:D4}-{1:D2}-{2:D2}\nTime: {3:D2}:{4:D2}:{5:D2}",
+                    datestamp.Year, datestamp.Month, datestamp.Day, datestamp.Hour, datestamp.Minute, datestamp.Second);
         }
 
         public static string GetDos83FileName(string file)

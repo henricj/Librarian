@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -185,7 +186,7 @@ namespace Nyerguds.Util.UI
                     var curTypes = new List<string>();
                     foreach (var filter in itemType.Filters.Distinct())
                         curTypes.Add(filter);
-                    types.Add(string.Format("{0} ({1})|{1}", itemType.Description, string.Join(";", curTypes.ToArray())));
+                    types.Add(string.Format(CultureInfo.InvariantCulture, "{0} ({1})|{1}", itemType.Description, string.Join(";", curTypes.ToArray())));
                     objects.Add(itemType.ItemObject);
                     continue;
                 }
@@ -193,7 +194,7 @@ namespace Nyerguds.Util.UI
                 for (var i = 0; i < extLength; i++)
                 {
                     var descr = skipOtherExtensions ? itemType.Description : descriptions[i];
-                    types.Add(string.Format("{0} ({1})|{1}", descr, filters[i]));
+                    types.Add(string.Format(CultureInfo.InvariantCulture, "{0} ({1})|{1}", descr, filters[i]));
                     var obj = itemType.ItemObject;
                     objects.Add(obj);
                     if (skipOtherExtensions)
@@ -225,7 +226,7 @@ namespace Nyerguds.Util.UI
                     if (!singleItem)
                         allTypes.Add(filter);
                 }
-                types.Add(string.Format("{0} ({1})|{1}", itemType.Description, string.Join(";", curTypes.ToArray())));
+                types.Add(string.Format(CultureInfo.InvariantCulture, "{0} ({1})|{1}", itemType.Description, string.Join(";", curTypes.ToArray())));
                 objects.Add(itemType.ItemObject);
             }
             if (string.IsNullOrEmpty(generaltypedesc))
@@ -262,11 +263,11 @@ namespace Nyerguds.Util.UI
             // prefer those on which it is the primary type
             // Try only the single-extension types
             foreach (var item in items)
-                if (item.Extensions.Length == 1 && item.Extensions[0].Equals(ext, StringComparison.InvariantCultureIgnoreCase))
+                if (item.Extensions.Length == 1 && item.Extensions[0].Equals(ext, StringComparison.OrdinalIgnoreCase))
                     possibleMatches.Add(item.ItemObject);
             // Try primary extension of each joint type
             foreach (var item in items)
-                if (item.Extensions.Length > 1 && item.Extensions[0].Equals(ext, StringComparison.InvariantCultureIgnoreCase))
+                if (item.Extensions.Length > 1 && item.Extensions[0].Equals(ext, StringComparison.OrdinalIgnoreCase))
                     possibleMatches.Add(item.ItemObject);
             // final fallback: sub-types of joint type
             foreach (var item in items)
@@ -290,12 +291,12 @@ namespace Nyerguds.Util.UI
     {
         public string[] Extensions { get; private set; }
         public string[] DescriptionsForExtensions { get; private set; }
-        public string[] Filters { get { return this.Extensions.Select(x => "*." + x).ToArray(); } }
+        public string[] Filters { get { return Extensions.Select(x => "*." + x).ToArray(); } }
         public string Description { get; private set; }
-        public string FullDescription => $"{this.Description} (*.{this.Extensions})";
+        public string FullDescription => $"{Description} (*.{Extensions})";
 
         /// <summary>Returns a newly created instance of this type.</summary>
-        public T ItemObject => itemObjectSet ? itemObject : (T)Activator.CreateInstance(this.ItemType);
+        public T ItemObject => itemObjectSet ? itemObject : (T)Activator.CreateInstance(ItemType);
 
         readonly T itemObject;
         readonly bool itemObjectSet;
@@ -306,32 +307,32 @@ namespace Nyerguds.Util.UI
         {
             if (!itemtype.IsSubclassOf(typeof(T)))
                 throw new ArgumentException("Entries in list must all be " + typeof(T).Name + " classes!", nameof(itemtype));
-            this.ItemType = itemtype;
-            var item = this.ItemObject;
+            ItemType = itemtype;
+            var item = ItemObject;
             if (item.FileExtensions.Length != item.DescriptionsForExtensions.Length)
-                throw new ArgumentException("Entry " + this.ItemObject.GetType().Name + " does not have equal amount of extensions and descriptions!", nameof(itemtype));
-            this.Description = item.ShortTypeDescription;
-            this.Extensions = item.FileExtensions;
-            this.DescriptionsForExtensions = item.DescriptionsForExtensions;
+                throw new ArgumentException("Entry " + ItemObject.GetType().Name + " does not have equal amount of extensions and descriptions!", nameof(itemtype));
+            Description = item.ShortTypeDescription;
+            Extensions = item.FileExtensions;
+            DescriptionsForExtensions = item.DescriptionsForExtensions;
         }
 
         public FileDialogItem(T item)
         {
             if (item == null)
                 throw new ArgumentNullException(nameof(item));
-            this.ItemType = item.GetType();
-            this.itemObject = item;
-            this.itemObjectSet = true;
+            ItemType = item.GetType();
+            itemObject = item;
+            itemObjectSet = true;
             if (item.FileExtensions.Length != item.DescriptionsForExtensions.Length)
-                throw new ArgumentException("Entry " + this.ItemObject.GetType().Name + " does not have equal amount of extensions and descriptions!", nameof(item));
-            this.Description = item.ShortTypeDescription;
-            this.Extensions = item.FileExtensions;
-            this.DescriptionsForExtensions = item.DescriptionsForExtensions;
+                throw new ArgumentException("Entry " + ItemObject.GetType().Name + " does not have equal amount of extensions and descriptions!", nameof(item));
+            Description = item.ShortTypeDescription;
+            Extensions = item.FileExtensions;
+            DescriptionsForExtensions = item.DescriptionsForExtensions;
         }
 
         public override string ToString()
         {
-            return this.ItemObject.ShortTypeDescription;
+            return ItemObject.ShortTypeDescription;
         }
     }
 }

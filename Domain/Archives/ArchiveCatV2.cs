@@ -108,7 +108,7 @@ namespace LibrarianTool.Domain.Archives
                         throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
                     fileLength = (int)fi.Length;
                 }
-                var curName = this.GetInternalFilename(entry.FileName);
+                var curName = GetInternalFilename(entry.FileName);
                 var copySize = Math.Min(curName.Length, 12);
                 Array.Copy(enc.GetBytes(curName), 0, buffer, 0, copySize);
                 for (var b = copySize; b < 12; b++)

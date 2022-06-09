@@ -13,15 +13,15 @@ namespace LibrarianTool.Domain
         public abstract string ShortTypeName { get; }
         public abstract string ShortTypeDescription { get; }
         public abstract string[] FileExtensions { get; }
-        public virtual string[] DescriptionsForExtensions => Enumerable.Repeat(this.ShortTypeDescription, this.FileExtensions.Length).ToArray();
+        public virtual string[] DescriptionsForExtensions => Enumerable.Repeat(ShortTypeDescription, FileExtensions.Length).ToArray();
         public virtual string FileExtension { get; set; }
         /// <summary>Supported types can always be loaded, but this indicates if save functionality to this type is also available.</summary>
         public virtual bool CanSave => true;
 
         public virtual bool SupportsFolders => false;
 
-        protected List<ArchiveEntry> _filesList = new();
-        public List<ArchiveEntry> FilesList => this._filesList;
+        List<ArchiveEntry> _filesList = new();
+        public List<ArchiveEntry> FilesList => _filesList;
         public string FileName { get; protected set; }
         public virtual string ExtraInfo { get; protected set; }
 
@@ -30,12 +30,12 @@ namespace LibrarianTool.Domain
         /// <returns>True if loading succeeded.</returns>
         public void LoadArchive(string loadPath)
         {
-            this.FileName = loadPath;
+            FileName = loadPath;
             List<ArchiveEntry> filesList;
             using (var fs = new FileStream(loadPath, FileMode.Open, FileAccess.Read))
-                filesList = this.LoadArchiveInternal(fs, loadPath);
+                filesList = LoadArchiveInternal(fs, loadPath);
             filesList ??= new List<ArchiveEntry>();
-            this._filesList = filesList;
+            _filesList = filesList;
         }
 
         /// <summary>Reads the stream, and fills in the _filesList list;</summary>
@@ -44,9 +44,9 @@ namespace LibrarianTool.Domain
         /// <returns>True if loading succeeded.</returns>
         public void LoadArchive(Stream loadStream, string archivePath)
         {
-            this.FileName = archivePath;
-            var filesList = this.LoadArchiveInternal(loadStream, archivePath) ?? new List<ArchiveEntry>();
-            this._filesList = filesList;
+            FileName = archivePath;
+            var filesList = LoadArchiveInternal(loadStream, archivePath) ?? new List<ArchiveEntry>();
+            _filesList = filesList;
         }
 
         /// <summary>Reads the bytes, and fills in the _filesList list;</summary>
@@ -55,12 +55,12 @@ namespace LibrarianTool.Domain
         /// <returns>True if loading succeeded.</returns>
         public void LoadArchive(byte[] loadData, string archivePath)
         {
-            this.FileName = archivePath;
+            FileName = archivePath;
             List<ArchiveEntry> filesList;
             using (var ms = new MemoryStream(loadData))
-                filesList = this.LoadArchiveInternal(ms, archivePath);
+                filesList = LoadArchiveInternal(ms, archivePath);
             filesList ??= new List<ArchiveEntry>();
-            this._filesList = filesList;
+            _filesList = filesList;
         }
 
         /// <summary>Reads the stream, and fills in the _filesList list;</summary>
@@ -82,7 +82,7 @@ namespace LibrarianTool.Domain
         /// <returns></returns>
         public bool ExtractFile(string filename, string savePath)
         {
-            return this.ExtractFile(this.FindFile(filename, out _), savePath);
+            return ExtractFile(FindFile(filename, out _), savePath);
         }
 
         /// <summary>Extracts the requested file from the _filesList list.</summary>
@@ -127,11 +127,11 @@ namespace LibrarianTool.Domain
         /// <returns>the found entry</returns>
         public virtual ArchiveEntry FindFile(string filePath, out int index)
         {
-            var filename = this.GetInternalFilename(filePath);
-            for (var i = 0; i < this._filesList.Count; i++)
+            var filename = GetInternalFilename(filePath);
+            for (var i = 0; i < _filesList.Count; i++)
             {
-                var current = this._filesList[i];
-                if (current.FileName.Equals(filename, StringComparison.InvariantCultureIgnoreCase))
+                var current = _filesList[i];
+                if (current.FileName.Equals(filename, StringComparison.OrdinalIgnoreCase))
                 {
                     index = i;
                     return current;
@@ -146,12 +146,12 @@ namespace LibrarianTool.Domain
         public virtual ArchiveEntry InsertFile(string filePath)
         {
             var isFolder = (File.GetAttributes(filePath) & FileAttributes.Directory) != 0;
-            var internalFilename = this.GetInternalFilename(Path.GetFileName(filePath));
-            this.FindFile(internalFilename, out var foundIndex);
-            var retEntry = this.InsertFileInternal(filePath, internalFilename, foundIndex);
+            var internalFilename = GetInternalFilename(Path.GetFileName(filePath));
+            FindFile(internalFilename, out var foundIndex);
+            var retEntry = InsertFileInternal(filePath, internalFilename, foundIndex);
             retEntry.IsFolder = isFolder;
             retEntry.Date = File.GetLastWriteTime(filePath);
-            this.OrderFilesListInternal(this._filesList);
+            OrderFilesListInternal(_filesList);
             return retEntry;
         }
 
@@ -161,11 +161,11 @@ namespace LibrarianTool.Domain
         public virtual ArchiveEntry InsertFile(string filePath, string internalFilename)
         {
             var isFolder = (File.GetAttributes(filePath) & FileAttributes.Directory) != 0;
-            internalFilename = this.GetInternalFilename(internalFilename);
-            this.FindFile(internalFilename, out var foundIndex);
-            var retEntry = this.InsertFileInternal(filePath, internalFilename, foundIndex);
+            internalFilename = GetInternalFilename(internalFilename);
+            FindFile(internalFilename, out var foundIndex);
+            var retEntry = InsertFileInternal(filePath, internalFilename, foundIndex);
             retEntry.IsFolder = isFolder;
-            this.OrderFilesListInternal(this._filesList);
+            OrderFilesListInternal(_filesList);
             return retEntry;
         }
 
@@ -173,15 +173,15 @@ namespace LibrarianTool.Domain
         {
             ArchiveEntry entry;
             if (foundIndex == -1)
-                this._filesList.Add(entry = new ArchiveEntry(filePath, internalFilename));
+                _filesList.Add(entry = new ArchiveEntry(filePath, internalFilename));
             else
-                this._filesList[foundIndex] = (entry = new ArchiveEntry(filePath, internalFilename, this._filesList[foundIndex].ExtraInfo));
+                _filesList[foundIndex] = (entry = new ArchiveEntry(filePath, internalFilename, _filesList[foundIndex].ExtraInfo));
             return entry;
         }
 
         protected virtual void OrderFilesListInternal(List<ArchiveEntry> filesList)
         {
-            var orderedList = this.FilesList.OrderBy(x => x.FileName).ToList();
+            var orderedList = FilesList.OrderBy(x => x.FileName).ToList();
             filesList.Clear();
             filesList.AddRange(orderedList);
         }
@@ -216,12 +216,12 @@ namespace LibrarianTool.Domain
             if (filenames == null || filenames.Length == 0)
                 return;
             var toRemove = new List<ArchiveEntry>();
-            foreach (var entry in this._filesList)
+            foreach (var entry in _filesList)
             {
                 var inList = false;
                 foreach (var filename in filenames)
                 {
-                    if (!entry.FileName.Equals(filename, StringComparison.InvariantCultureIgnoreCase))
+                    if (!entry.FileName.Equals(filename, StringComparison.OrdinalIgnoreCase))
                         continue;
                     inList = true;
                     break;
@@ -232,15 +232,15 @@ namespace LibrarianTool.Domain
                 break;
             }
             foreach (var entry in toRemove)
-                this._filesList.Remove(entry);
-            this._filesList = this.FilesList.OrderBy(x => x.FileName).ToList();
+                _filesList.Remove(entry);
+            _filesList = FilesList.OrderBy(x => x.FileName).ToList();
         }
 
         public bool SaveArchive(Archive archive, string savePath)
         {
             using var ms = new MemoryStream();
             // Cannot be done straight to the FileStream since unmodified entries may be read from the original file.
-            if (!this.SaveArchive(archive, ms, savePath))
+            if (!SaveArchive(archive, ms, savePath))
                 return false;
             ms.Position = 0;
             using var fs = new FileStream(savePath, FileMode.Create);
@@ -251,7 +251,7 @@ namespace LibrarianTool.Domain
         public byte[] SaveArchive(Archive archive)
         {
             using var ms = new MemoryStream();
-            if (!this.SaveArchive(archive, ms, null))
+            if (!SaveArchive(archive, ms, null))
                 return null;
             return ms.ToArray();
         }

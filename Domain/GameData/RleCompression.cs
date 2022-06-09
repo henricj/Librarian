@@ -101,7 +101,7 @@ namespace Nyerguds.GameData.Compression
         /// <param name="endOffset">End offset in buffer.</param>
         /// <param name="abortOnError">If true, any found command with amount "0" in it will cause the process to abort and return null.</param>
         /// <returns>A byte array of the given output size, filled with the decompressed data.</returns>
-        public static byte[] RleDecode(ReadOnlySpan<byte> buffer, uint? startOffset, uint? endOffset, bool abortOnError)
+        public byte[] RleDecode(ReadOnlySpan<byte> buffer, uint? startOffset, uint? endOffset, bool abortOnError)
         {
             var rle = new T();
             byte[] bufferOut = null;
@@ -118,7 +118,7 @@ namespace Nyerguds.GameData.Compression
         /// <param name="decompressedSize">The expected size of the decompressed data.</param>
         /// <param name="abortOnError">If true, any found command with amount "0" in it will cause the process to abort and return null.</param>
         /// <returns>A byte array of the given output size, filled with the decompressed data.</returns>
-        public static byte[] RleDecode(byte[] buffer, uint? startOffset, uint? endOffset, int decompressedSize, bool abortOnError)
+        public byte[] RleDecode(byte[] buffer, uint? startOffset, uint? endOffset, int decompressedSize, bool abortOnError)
         {
             var rle = new T();
             return rle.RleDecodeData(buffer, startOffset, endOffset, decompressedSize, abortOnError);
@@ -133,7 +133,7 @@ namespace Nyerguds.GameData.Compression
         /// <param name="bufferOut">Output array. Determines the maximum that can be decoded. If the given object is null it will be filled automatically.</param>
         /// <param name="abortOnError">If true, any found command with amount "0" in it will cause the process to abort and return null.</param>
         /// <returns>The amount of written bytes in bufferOut.</returns>
-        public static int RleDecode(ReadOnlySpan<byte> buffer, uint? startOffset, uint? endOffset, ref byte[] bufferOut, bool abortOnError)
+        public int RleDecode(ReadOnlySpan<byte> buffer, uint? startOffset, uint? endOffset, ref byte[] bufferOut, bool abortOnError)
         {
             var rle = new T();
             return rle.RleDecodeData(buffer, startOffset, endOffset, ref bufferOut, abortOnError);
@@ -144,7 +144,7 @@ namespace Nyerguds.GameData.Compression
         /// </summary>
         /// <param name="buffer">Input buffer.</param>
         /// <returns>The run-length encoded data.</returns>
-        public static byte[] RleEncode(byte[] buffer)
+        public byte[] RleEncode(byte[] buffer)
         {
             var rle = new T();
             return rle.RleEncodeData(buffer);
@@ -164,7 +164,7 @@ namespace Nyerguds.GameData.Compression
         public byte[] RleDecodeData(byte[] buffer, uint? startOffset, uint? endOffset, int decompressedSize, bool abortOnError)
         {
             var outputBuffer = new byte[decompressedSize];
-            var result = this.RleDecodeData(buffer, startOffset, endOffset, ref outputBuffer, abortOnError);
+            var result = RleDecodeData(buffer, startOffset, endOffset, ref outputBuffer, abortOnError);
             if (result == -1)
                 return null;
             return outputBuffer;
@@ -195,7 +195,7 @@ namespace Nyerguds.GameData.Compression
             while (inPtr < inPtrEnd && outPtr < maxOutLen)
             {
                 // get next code
-                if (!this.GetCode(buffer, ref inPtr, inPtrEnd, out var repeat, out var run) || (run == 0 && abortOnError))
+                if (!GetCode(buffer, ref inPtr, inPtrEnd, out var repeat, out var run) || (run == 0 && abortOnError))
                 {
                     error = true;
                     break;
@@ -266,8 +266,8 @@ namespace Nyerguds.GameData.Compression
             // neither run-length 0 nor 1 are useful for repeat codes (0 should not exist, 1 is identical to copy),
             // so the values are often decremented to allow storing one or two more bytes.
             // Some implementations also use these values as indicators for reading a larger value to repeat or copy.
-            var maxRepeat = this.MaxRepeatValue;
-            var maxCopy = this.MaxCopyValue;
+            var maxRepeat = MaxRepeatValue;
+            var maxCopy = MaxCopyValue;
 
             var len = (uint)buffer.Length;
             uint detectedRepeat = 0;
@@ -285,7 +285,7 @@ namespace Nyerguds.GameData.Compression
                     // Increase inptr to the last repeated.
                     for (; inPtr < end && buffer[inPtr] == cur; inPtr++) { }
                     // WriteCode is split off into a function to allow overriding it in specific implementations.
-                    if (!this.WriteCode(bufferOut, ref outPtr, bufLen, true, (inPtr - start)) || outPtr + 1 >= bufLen)
+                    if (!WriteCode(bufferOut, ref outPtr, bufLen, true, (inPtr - start)) || outPtr + 1 >= bufLen)
                         break;
                     // Add value to repeat
                     bufferOut[outPtr++] = cur;
@@ -337,7 +337,7 @@ namespace Nyerguds.GameData.Compression
                         if (amount == maxCopy)
                             detectedRepeat = 0;
                         // WriteCode is split off into a function to allow overriding it in specific implementations.
-                        abort = !this.WriteCode(bufferOut, ref outPtr, bufLen, false, amount) || outPtr + amount >= bufLen;
+                        abort = !WriteCode(bufferOut, ref outPtr, bufLen, false, amount) || outPtr + amount >= bufLen;
                         if (abort)
                             break;
                         // Add values to copy
@@ -368,14 +368,14 @@ namespace Nyerguds.GameData.Compression
         /// </summary>
         /// <param name="buffer">Input buffer.</param>
         /// <param name="max">The maximum offset to read inside the buffer.</param>
-        /// <param name="ptr">The current read offset inside the buffer.</param>
+        /// <param name="offset">The current read offset inside the buffer.</param>
         /// <param name="minAmount">Minimum amount of repeating bytes to search for.</param>
         /// <returns>The amount of detected repeating bytes.</returns>
-        protected static uint RepeatingAhead(ReadOnlySpan<byte> buffer, uint max, uint ptr, uint minAmount)
+        protected static uint RepeatingAhead(ReadOnlySpan<byte> buffer, uint max, uint offset, uint minAmount)
         {
-            var cur = buffer[(int)ptr];
+            var cur = buffer[(int)offset];
             for (uint i = 1; i < minAmount; i++)
-                if (ptr + i >= max || buffer[(int)(ptr + i)] != cur)
+                if (offset + i >= max || buffer[(int)(offset + i)] != cur)
                     return i;
             return minAmount;
         }
