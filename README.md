@@ -1,0 +1,91 @@
+# Librarian
+
+--------- Created by by Nyerguds (25/01/2019)
+
+Librarian is a simple game archive management tool.
+
+It was originally created for the Mythos LIB archives, but support for more
+archives was added later. Currently supported archives:
+
+- Mythos Software LIB v1
+- Mythos Software LIB v2
+- Westwood Studios PAK v1
+- Westwood Studios PAK v2
+- Westwood Studios PAK v3
+- Sierry/Dynamix archives v1
+- Sierry/Dynamix archives v2 (read-only)
+- Ren'Py archives (read-only)
+- Interactive Girls Club M3/SLB archives
+- KORT.SND archive from King Arthur's K.O.R.T.
+- Cryo's Dune CD DAT Archives (read-only)
+- SelectWare Technologies Archive (read-only)
+- Genus Microprogramming GX Archive (read-only)
+- MPS Labs Catalog v1
+- MPS Labs Catalog v2
+
+Further information on the tool and its file formats can be found on the Shikadi modding wiki:
+<https://moddingwiki.shikadi.net/wiki/Librarian>
+
+If you like what I'm doing, and you have too much money, feel free to donate:
+<https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=nyerguds@gmail.com&currency_code=EUR>
+
+## Note on subfolders inside archives
+
+
+While some archive types support internal subdirectories, the support for this is still quite
+rudimentary. Files in subfolders can be added by dropping an entire folder into the archive,
+or one by one, using the "insert file as" feature.
+
+Note that at this moment, there are no formats with subdirectories that actually support saving.
+
+## Version history
+
+
+v1.1.0: (07/05/2021 17:07)
+- Fixed an issue with Mythos LIB Archives showing an empty files list.
+- Fixed an issue where files could be identified as empty CAT archives.
+- Date stamp and directory status are now visible on the UI.
+- Added support for extracting with directories.
+- Simplified code for transferring the buffer info in KORT sound files.
+- New files inserted in a KORT sound archive no longer skip type detection.
+- Fixed broken file decompression when extracting from Dynamix v2 archives.
+
+v1.0.5: (05/05/2021 11:04)
+
+- Added better feedback when attempting to save to a read-only medium.
+- Added date reading support to GX archives
+- Added missing filtering for some archive types that can't be saved.
+
+v1.0.4: (05/05/2021 10:10)
+
+- Added read support for the archives on the CD version of Cryo's "Dune".
+- Added read support for SelectWare Technologies archives.
+- Added read support for Genus Microprogramming GX archives.
+- Improved error handling on saving
+- Added "last modified date" to the list of file information that can be stored.
+- Added support for MPS Labs Catalog v1 and v2 archives.
+
+v1.0.3: (26/01/2020 17:50)
+
+- Fixed error that prevented loading Mythos LIB format.
+- Open/Save file dialog type lists are now sorted.
+- Right mouse button menu implemented.
+
+v1.0.2: (16/01/2020 12:10)
+
+- Added support for Interactive Girls M3/SLB archives.
+- Added support for the KORT.SND archive from King Arthur's K.O.R.T.
+
+v1.0.1: (28/05/2019 10:35)
+
+- Added error feedback on failures.
+- Added reading and writing for Westwood PAK archives.
+- Added reading and writing for Sierry/Dynamix v1 archives.
+- Added read functionality for Sierry/Dynamix v2 archives.
+- Added "insert as" functionality.
+- Added read functionality for Ren'Py archives.
+- Unusable menu functions are disabled if no file is loaded.
+
+v1.0.0: (25/01/2019 12:05)
+
+- All basic functionality implemented for Mythos LIB v1 and v2.
