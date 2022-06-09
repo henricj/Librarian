@@ -52,8 +52,9 @@ namespace LibrarianTool.Domain.Archives
             var foundNullAddress = false;
             var foundNullName = false;
             uint address = 0;
+            var foundLongFileName = false;
             var filesList = new List<ArchiveEntry>();
-            Span<byte> nameBuf = stackalloc byte[13];
+            Span<byte> nameBuf = stackalloc byte[256];
             while (loadStream.Position < minOffs)
             {
                 if (loadStream.Read(addressBuffer) < addressBuffer.Length)
@@ -98,7 +99,12 @@ namespace LibrarianTool.Domain.Archives
                     nameBuf[curNamePos] = (byte)curByte;
                 }
                 if (curNamePos >= 13)
-                    throw new FileTypeLoadException("Bad file name.");
+                {
+                    foundLongFileName = true;
+                    if (curNamePos >= nameBuf.Length)
+                        throw new FileTypeLoadException("Bad file name.");
+                }
+
                 ReadOnlySpan<byte> roNameBuf = nameBuf[..curNamePos];
                 var curName = Encoding.ASCII.GetString(roNameBuf);
                 if (curName.Length == 0)
@@ -118,6 +124,9 @@ namespace LibrarianTool.Domain.Archives
                     filesList.Add(curEntry);
                 }
             }
+
+            if (foundLongFileName)
+                this.ExtraInfo = "File contains long file names.";
 
             switch (this.PakVer)
             {
