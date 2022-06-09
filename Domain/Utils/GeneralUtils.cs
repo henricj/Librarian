@@ -143,13 +143,14 @@ namespace Nyerguds.Util
 
         public static string ProgramVersion()
         {
-            var ver = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
-            //Version v = AssemblyName.GetAssemblyName(Assembly.GetExecutingAssembly().Location).Version;
-            var version = $"v{ver.FileMajorPart}.{ver.FileMinorPart}";
-            if (ver.FileBuildPart > 0)
-                version += "." + ver.FileBuildPart;
-            if (ver.FilePrivatePart > 0)
-                version += "." + ver.FilePrivatePart;
+            var ver = typeof(GeneralUtils).Assembly.GetName().Version;
+            if (null == ver)
+                return "vUnknown";
+            var version = $"v{ver.Major}.{ver.Minor}";
+            if (ver.Build > 0)
+                version += "." + ver.Build;
+            if (ver.Revision > 0)
+                version += "." + ver.Revision;
             return version;
         }
 
