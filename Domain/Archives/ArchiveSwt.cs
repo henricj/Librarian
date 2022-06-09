@@ -8,61 +8,61 @@ namespace LibrarianTool.Domain.Archives
 {
     public class ArchiveSwt : Archive
     {
-        public override String ShortTypeName { get { return "SelectWare Technologies Archive"; } }
-        public override String ShortTypeDescription { get { return "SelectWare Archive"; } }
-        public override String[] FileExtensions { get { return new String[] { "swt" }; } }
-        public override Boolean CanSave { get { return false; } }
-        public override Boolean SupportsFolders { get { return true; } }
+        public override string ShortTypeName => "SelectWare Technologies Archive";
+        public override string ShortTypeDescription => "SelectWare Archive";
+        public override string[] FileExtensions { get { return new[] { "swt" }; } }
+        public override bool CanSave => false;
+        public override bool SupportsFolders => true;
 
-        const String SWT_BANNER = "SelectWare Technologies demo file";
+        const string SWT_BANNER = "SelectWare Technologies demo file";
 
         protected override List<ArchiveEntry> LoadArchiveInternal(System.IO.Stream loadStream, string archivePath)
         {
-            UInt32 end = (UInt32)loadStream.Length;
+            var end = (uint)loadStream.Length;
             Encoding enc = new ASCIIEncoding();
             if (end < SWT_BANNER.Length)
                 throw new FileTypeLoadException("Archive not long enough for header.");
-            Byte[] buffer = new Byte[SWT_BANNER.Length];
+            var buffer = new byte[SWT_BANNER.Length];
             loadStream.Read(buffer, 0, SWT_BANNER.Length);
-            String header = enc.GetString(buffer);
+            var header = enc.GetString(buffer);
             if (header != SWT_BANNER)
                 throw new FileTypeLoadException("Header does not match.");
             loadStream.Read(buffer, 0, 0x0B);
             // First 7 bytes should be [0A 1A 00 00 00 00 00]. Not going to check that though.
             // Next 4 bytes are unknown.
             // start on first file
-            Int32 curPos = 0x2C;
-            const Int32 bufLen = 46;
-            List<ArchiveEntry> filesList = new List<ArchiveEntry>();
-            Dictionary<UInt16, ArchiveEntry> folders = new Dictionary<UInt16, ArchiveEntry>();
-            UInt16? prevFolderId = null;
-            ArchiveEntry lastFolder = null;
+            var curPos = 0x2C;
+            const int bufLen = 46;
+            var filesList = new List<ArchiveEntry>();
+            var folders = new Dictionary<ushort, ArchiveEntry>();
+            ushort? prevFolderId = null;
+            //ArchiveEntry lastFolder = null;
             while (curPos < end)
             {
-                buffer = new Byte[bufLen];
+                buffer = new byte[bufLen];
                 loadStream.Position = curPos;
-                Int32 address = curPos + bufLen;
+                var address = curPos + bufLen;
                 if (curPos + bufLen >= end)
                     throw new FileTypeLoadException("Archive not long enough for file header.");
                 loadStream.Read(buffer, 0, bufLen);
-                UInt32 entryFlags = (UInt32)ArrayUtils.ReadIntFromByteArray(buffer, 0x00, 3, true);
+                var entryFlags = (uint)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0, 3), true);
                 // 00000000 00000000 00000001
-                Boolean rootFile = (entryFlags & 0x000001) == 0;
+                var rootFile = (entryFlags & 0x000001) == 0;
                 // 10000000 00000000 00000000
-                Boolean flag8 = (entryFlags & 0x800000) != 0;
+                var flag8 = (entryFlags & 0x800000) != 0;
                 // 00000001 00000000 00000000
-                Boolean flag3_1 = (entryFlags & 0x010000) != 0;
+                var flag3_1 = (entryFlags & 0x010000) != 0;
                 // 00000010 00000000 00000000
-                Boolean flag3_2 = (entryFlags & 0x020000) != 0;
-                UInt16 index = (UInt16)ArrayUtils.ReadIntFromByteArray(buffer, 0x0F, 2, true);
-                UInt16 folderId = (UInt16)ArrayUtils.ReadIntFromByteArray(buffer, 0x11, 2, true);
+                var flag3_2 = (entryFlags & 0x020000) != 0;
+                var index = (ushort)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0x0F, 2), true);
+                var folderId = (ushort)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0x11, 2), true);
                 // Detected switch to different folder ID; save this as indication to store a new folder id later.
-                Boolean newFolder = prevFolderId != folderId;
+                var newFolder = prevFolderId != folderId;
                 prevFolderId = folderId;
-                UInt32 unkn1 = (UInt32)ArrayUtils.ReadIntFromByteArray(buffer, 0x13, 4, true);
+                var unkn1 = (uint)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0x13, 4), true);
                 // buffer[0x17] = 0x20
-                UInt16 dosTime = (UInt16)ArrayUtils.ReadIntFromByteArray(buffer, 0x18, 2, true);
-                UInt16 dosDate = (UInt16)ArrayUtils.ReadIntFromByteArray(buffer, 0x1A, 2, true);
+                var dosTime = (ushort)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0x18, 2), true);
+                var dosDate = (ushort)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0x1A, 2), true);
                 DateTime dt;
                 try
                 {
@@ -72,18 +72,20 @@ namespace LibrarianTool.Domain.Archives
                 {
                     throw new FileTypeLoadException(argex.Message, argex);
                 }
-                Int32 length = (Int32)ArrayUtils.ReadIntFromByteArray(buffer, 0x1C, 4, true);
-                Boolean isFolder = length == 0;
+                var length = (int)ArrayUtils.ReadIntFromByteArray(buffer.AsSpan(0x1C, 4), true);
+                var isFolder = length == 0;
 
-                String curName = enc.GetString(buffer.Skip(0x20).TakeWhile(x => x != 0).ToArray());
-                ArchiveEntry curEntry = new ArchiveEntry(curName, archivePath, address, length);
-                curEntry.ExtraInfoBin = buffer;
-                curEntry.Date = dt;
-                curEntry.ExtraInfo = "Folder ID: "+ folderId.ToString("X4") + ", file index: " + index + "\n";
+                var curName = enc.GetString(buffer.Skip(0x20).TakeWhile(x => x != 0).ToArray());
+                var curEntry = new ArchiveEntry(curName, archivePath, address, length)
+                {
+                    ExtraInfoBin = buffer,
+                    Date = dt,
+                    ExtraInfo = "Folder ID: " + folderId.ToString("X4") + ", file index: " + index + "\n"
+                };
 
                 if (newFolder && !folders.ContainsKey(folderId))
                 {
-                    ArchiveEntry previous = filesList.LastOrDefault();
+                    var previous = filesList.LastOrDefault();
                     if (previous == null || previous.Length == 0)
                     {
                         folders[folderId] = previous;
@@ -91,7 +93,7 @@ namespace LibrarianTool.Domain.Archives
                             previous.IsFolder = true;
                     }
                 }
-                ArchiveEntry curFolder = folders[folderId];
+                var curFolder = folders[folderId];
                 if (curFolder != null)
                 {
                     curName = curFolder.FileName + "\\" + curName;

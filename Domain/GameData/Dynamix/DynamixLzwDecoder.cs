@@ -1,5 +1,5 @@
-﻿using System;
-using Nyerguds.Util;
+﻿using Nyerguds.Util;
+using System;
 
 namespace Nyerguds.GameData.Dynamix
 {
@@ -9,36 +9,36 @@ namespace Nyerguds.GameData.Dynamix
     public class DynamixLzwDecoder
     {
         // Current code's string
-        private Byte[] codeCur = new Byte[256];
+        readonly byte[] codeCur = new byte[256];
         // Length of the current code
-        private Int32 codeLen;
+        int codeLen;
         // Amount of bits in the current code
-        private Int32 codeSize;
+        int codeSize;
         // cache chunks; 8 times the code size. Unsure what uses this except the reset.
-        private Int32 cacheBits;
+        int cacheBits;
 
         // The "strings" of the dictionary table
-        private Byte[][] dictTableStr;
+        byte[][] dictTableStr;
         // lengths of the "strings" in the dictionary table
-        private Byte[] dictTableLen;
+        byte[] dictTableLen;
 
         // Current dictionary size
-        private Int32 dictSize;
+        int dictSize;
         // Current dictionary maximum before the codeSize needs to be increased.
-        private Int32 dictMax;
+        int dictMax;
         // True if no more codes can be added.
-        private Boolean dictFull;
+        bool dictFull;
 
-        private void LzwReset()
+        void LzwReset()
         {
-            this.dictTableStr = new Byte[0x4000][];
-            this.dictTableLen = new Byte[0x4000];
+            this.dictTableStr = new byte[0x4000][];
+            this.dictTableLen = new byte[0x4000];
             //for (Int32 i = 256; i < this.dictTableStr.Length; i++)
             //    dictTableStr[i] = new Byte[100];
-            for (Int32 lcv = 0; lcv < 256; lcv++)
+            for (var lcv = 0; lcv < 256; lcv++)
             {
                 this.dictTableLen[lcv] = 1;
-                this.dictTableStr[lcv] = new Byte[] {(Byte)lcv};
+                this.dictTableStr[lcv] = new[] { (byte)lcv };
             }
             // 00-FF = ASCII
             // 100 = reset
@@ -52,19 +52,19 @@ namespace Nyerguds.GameData.Dynamix
             this.cacheBits = 0;
         }
 
-        public void LzwDecode(Byte[] buffer, Int32? startOffset, Int32? endOffset, Byte[] bufferOut)
+        public void LzwDecode(ReadOnlySpan<byte> buffer, int? startOffset, int? endOffset, Span<byte> bufferOut)
         {
-            Int32 inPtr = startOffset ?? 0;
-            Int32 bitIndex = inPtr * 8;
-            Int32 inPtrEnd = endOffset.HasValue ? Math.Min(endOffset.Value, buffer.Length) : buffer.Length;
-            Int32 outPtr = 0;
+            var inPtr = startOffset ?? 0;
+            var bitIndex = inPtr * 8;
+            var inPtrEnd = endOffset.HasValue ? Math.Min(endOffset.Value, buffer.Length) : buffer.Length;
+            var outPtr = 0;
             this.LzwReset();
             this.cacheBits = 0;
             while (outPtr < bufferOut.Length)
             {
                 // get next code
                 //Int32 code = GetBitsRight(this.codeSize, buffer, inPtrEnd, ref inPtr);
-                Int32 code = ArrayUtils.ReadBitsFromByteArray(buffer, ref bitIndex, this.codeSize, inPtrEnd);
+                var code = ArrayUtils.ReadBitsFromByteArray(buffer, ref bitIndex, this.codeSize, inPtrEnd);
 
                 if (code == -1)
                     return;
@@ -78,7 +78,7 @@ namespace Nyerguds.GameData.Dynamix
                     // Dynamix: dump data cache
                     if (this.cacheBits > 0)
                     {
-                        Int32 ignoreBits = this.codeSize * 8 - this.cacheBits;
+                        var ignoreBits = this.codeSize * 8 - this.cacheBits;
                         ArrayUtils.ReadBitsFromByteArray(buffer, ref bitIndex, ignoreBits, inPtrEnd);
                     }
                     this.LzwReset();
@@ -89,15 +89,15 @@ namespace Nyerguds.GameData.Dynamix
                 {
                     this.codeCur[this.codeLen++] = this.codeCur[0];
                     // write output - future expanded string
-                    for (UInt32 codelen = 0; codelen < this.codeLen; codelen++)
+                    for (uint codelen = 0; codelen < this.codeLen; codelen++)
                     //for (lastCodeValue = 0; lastCodeValue < this.codeLen; lastCodeValue++)
                         bufferOut[outPtr++] = this.codeCur[codelen];
                 }
                 else
                 {
                     // write output
-                    Int32 len = this.dictTableLen[code];
-                    for (UInt32 codelen = 0; codelen < len; codelen++)
+                    int len = this.dictTableLen[code];
+                    for (uint codelen = 0; codelen < len; codelen++)
                     //for (lastCodeValue = 0; lastCodeValue < len; lastCodeValue++)
                         bufferOut[outPtr++] = this.dictTableStr[code][codelen];
                     // expand current string
@@ -108,7 +108,7 @@ namespace Nyerguds.GameData.Dynamix
                 // add to dictionary (2+ bytes only)
                 if (!this.dictFull)
                 {
-                    Int32 lastCodeValue;
+                    int lastCodeValue;
                     // check full condition
                     if (this.dictSize == this.dictMax && this.codeSize == 12)
                     {
@@ -127,13 +127,13 @@ namespace Nyerguds.GameData.Dynamix
                         this.codeSize++;
                     }
                     // add new entry
-                    this.dictTableStr[lastCodeValue]= new Byte[this.codeLen];
-                    for (UInt32 codelen = 0; codelen < this.codeLen; codelen++)
+                    this.dictTableStr[lastCodeValue] = new byte[this.codeLen];
+                    for (uint codelen = 0; codelen < this.codeLen; codelen++)
                         this.dictTableStr[lastCodeValue][codelen] = this.codeCur[codelen];
-                    this.dictTableLen[lastCodeValue] = (Byte)this.codeLen;
+                    this.dictTableLen[lastCodeValue] = (byte)this.codeLen;
                 }
                 // reset to current code.
-                for (UInt32 codelen = 0; codelen < this.dictTableLen[code]; codelen++)
+                for (uint codelen = 0; codelen < this.dictTableLen[code]; codelen++)
                 //for (lastCodeValue = 0; lastCodeValue < this.dictTableLen[code]; lastCodeValue++)
                     this.codeCur[codelen] = this.dictTableStr[code][codelen];
                 this.codeLen = this.dictTableLen[code];

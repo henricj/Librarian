@@ -9,36 +9,44 @@ namespace LibrarianTool.Domain.Archives
 {
     public class ArchiveDuneCd : Archive
     {
-        protected const Int32 FileEntryLength = 0x19;
+        protected const int FileEntryLength = 0x19;
 
-        public override String ShortTypeName { get { return "Dune CD Archive"; } }
-        public override String ShortTypeDescription { get { return "Dune CD Archive"; } }
-        public override String[] FileExtensions { get { return new String[] { "dat" }; } }
-        public override Boolean CanSave { get { return false; } }
+        public override string ShortTypeName => "Dune CD Archive";
+        public override string ShortTypeDescription => "Dune CD Archive";
+        public override string[] FileExtensions { get { return new[] { "dat" }; } }
+        public override bool CanSave => false;
 
-        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, String archivePath)
+        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
         {
-            Encoding enc = Encoding.GetEncoding(437);
-            Int64 end = loadStream.Length;
-            Byte[] buffer = new Byte[FileEntryLength];
-            List<ArchiveEntry> filesList = new List<ArchiveEntry>();
+            var enc = Encoding.GetEncoding(437);
+            var end = loadStream.Length;
+            Span<byte> buffer = stackalloc byte[FileEntryLength];
+            var filesList = new List<ArchiveEntry>();
             if (end - loadStream.Position < 0x02)
                 throw new FileTypeLoadException("Not a Dune CD Archive.");
-            loadStream.Read(buffer, 0, 2);
-            Int32 length = (Int32)ArrayUtils.ReadIntFromByteArray(buffer, 0, 2, true);
+            if (2 != loadStream.Read(buffer[..2]))
+                throw new FileTypeLoadException("Not a Dune CD Archive.");
+            var length = (int)ArrayUtils.ReadIntFromByteArray(buffer[..2], true);
             if (end - loadStream.Position < (length * FileEntryLength))
                 throw new FileTypeLoadException("Not a Dune CD Archive.");
-            for (Int32 i = 0; i < length; i++)
+            for (var i = 0; i < length; i++)
             {
-                loadStream.Read(buffer, 0, FileEntryLength);
-                Byte[] curNameB = buffer.Take(0x10).TakeWhile(x => x != 0).ToArray();
+                if (FileEntryLength != loadStream.Read(buffer[..FileEntryLength]))
+                    throw new FileTypeLoadException("Not a Dune CD Archive.");
+                ReadOnlySpan<byte> curNameB = buffer[0x10..];
+                var index = curNameB.IndexOf((byte)0);
+                if (index >= 0)
+                    curNameB = curNameB[..index];
                 if (curNameB.Length == 0)
                     break;
-                if (curNameB.Any(c => c < 0x20 || c >= 0x7F))
-                    throw new FileTypeLoadException("Filename contains nonstandard characters.");
-                String curName = enc.GetString(curNameB).Trim();
-                Int32 curEntryLength = (Int32)ArrayUtils.ReadIntFromByteArray(buffer, 0x10, 4, true);
-                Int32 curEntryPos = (Int32)ArrayUtils.ReadIntFromByteArray(buffer, 0x14, 4, true);
+                foreach (var c in curNameB)
+                {
+                    if (c is < 0x20 or >= 0x7F)
+                        throw new FileTypeLoadException("Filename contains nonstandard characters.");
+                }
+                var curName = enc.GetString(curNameB).Trim();
+                var curEntryLength = (int)ArrayUtils.ReadIntFromByteArray(buffer.Slice(0x10, 4), true);
+                var curEntryPos = (int)ArrayUtils.ReadIntFromByteArray(buffer.Slice(0x14, 4), true);
                 if (curEntryPos + curEntryLength > end)
                     throw new FileTypeLoadException("Archive entry outside file bounds.");
                 if (curName.Length == 0 && curEntryLength == 0)
@@ -47,7 +55,7 @@ namespace LibrarianTool.Domain.Archives
             }
             return filesList;
         }
-        
+
         /// <summary>
         /// Converts the filename to the type supported internally. By default, this strips
         /// out all non-ascii characters, converts to uppercase, and limits the length to 8.3.
@@ -55,26 +63,26 @@ namespace LibrarianTool.Domain.Archives
         /// </summary>
         /// <param name="filePath">Original file path.</param>
         /// <returns></returns>
-        public override String GetInternalFilename(String filePath)
+        public override string GetInternalFilename(string filePath)
         {
             // TODO: Something still wrong in this code. Not sure what. Investigate later.
-            String path = Path.GetDirectoryName(filePath) ?? String.Empty;
+            var path = Path.GetDirectoryName(filePath) ?? string.Empty;
             path = path.Trim('\\');
-            String filename = Path.GetFileNameWithoutExtension(filePath) ?? String.Empty;
-            String extension = Path.GetExtension(filePath) ?? String.Empty;
+            var filename = Path.GetFileNameWithoutExtension(filePath) ?? string.Empty;
+            var extension = Path.GetExtension(filePath) ?? string.Empty;
             if (filename.Length > 8)
-                filename = filename.Substring(0, 8);
+                filename = filename[..8];
             if (extension.Length > 4)
-                extension = extension.Substring(0, 4);
+                extension = extension[..4];
             // 0x0E: 0x10 minus ending-0 minus space for backslash.
-            Int32 availPathLength = 0x0E - filename.Length - extension.Length;
+            var availPathLength = 0x0E - filename.Length - extension.Length;
             if (path.Length > availPathLength)
-                path = path.Substring(0, availPathLength);
-            String newPath = (path + "\\" + filename + extension).TrimStart('\\');
-            return new String(newPath.ToUpperInvariant().Replace(' ', '_').Where(x => x > 0x20 && x < 0x7F).ToArray());
+                path = path[..availPathLength];
+            var newPath = (path + "\\" + filename + extension).TrimStart('\\');
+            return new string(newPath.ToUpperInvariant().Replace(' ', '_').Where(x => x > 0x20 && x < 0x7F).ToArray());
         }
 
-        public override Boolean SaveArchive(Archive archive, Stream saveStream, String savePath)
+        public override bool SaveArchive(Archive archive, Stream saveStream, string savePath)
         {
             // TODO
             return false;

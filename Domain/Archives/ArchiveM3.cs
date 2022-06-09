@@ -1,9 +1,7 @@
-﻿using System;
+﻿using Nyerguds.Util;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using Nyerguds.Util;
 
 namespace LibrarianTool.Domain.Archives
 {
@@ -13,62 +11,65 @@ namespace LibrarianTool.Domain.Archives
     /// </summary>
     public class ArchiveM3 : Archive
     {
-        protected const Int32 FileEntryLength = 0x11;
+        protected const int FileEntryLength = 0x11;
 
-        public override String ShortTypeName { get { return "Interactive Girls Archive"; } }
-        public override String ShortTypeDescription { get { return "Interactive Girls Archive"; } }
-        public override String[] FileExtensions { get { return new String[] { "m3", "slb" }; } }
+        public override string ShortTypeName => "Interactive Girls Archive";
+        public override string ShortTypeDescription => "Interactive Girls Archive";
+        public override string[] FileExtensions { get { return new[] { "m3", "slb" }; } }
 
-        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, String archivePath)
+        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
         {
             loadStream.Position = 0;
-            Int64 streamLength = loadStream.Length;
-            Byte[] addressBuffer = new Byte[4];
-            if (loadStream.Read(addressBuffer, 0, 4) < 4)
+            var streamLength = loadStream.Length;
+            Span<byte> addressBuffer = stackalloc byte[4];
+            if (loadStream.Read(addressBuffer) < addressBuffer.Length)
                 throw new FileTypeLoadException("Archive not long enough to read file offset!");
-            if (ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 4, true) != 0)
+            if (ArrayUtils.ReadIntFromByteArray(addressBuffer, true) != 0)
                 throw new FileTypeLoadException("Not an IGC Archive!");
-            Int32 readOffs = 4;
-            Int32 minOffs = Int32.MaxValue;
-            Int32 indexOffs = 0;
-            List<ArchiveEntry> filesList = new List<ArchiveEntry>();
+            var readOffs = 4;
+            var minOffs = int.MaxValue;
+            var indexOffs = 0;
+            var filesList = new List<ArchiveEntry>();
             do
             {
-                Int32 prevIndexOffs = indexOffs;
-                if (loadStream.Read(addressBuffer, 0, 4) < 4)
+                var prevIndexOffs = indexOffs;
+                if (loadStream.Read(addressBuffer) < addressBuffer.Length)
                     throw new FileTypeLoadException("Archive not long enough to read file offset!");
-                indexOffs = (Int32)ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 4, true);
+                indexOffs = (int)ArrayUtils.ReadIntFromByteArray(addressBuffer, true);
                 minOffs = Math.Min(minOffs, indexOffs);
                 if (indexOffs > streamLength || prevIndexOffs >= indexOffs)
                     throw new FileTypeLoadException("Not an IGC archive!");
                 if (prevIndexOffs != 0)
                 {
-                    Boolean isImage = prevIndexOffs + 0x1B <= indexOffs;
-                    Boolean isScript = prevIndexOffs + 2 <= indexOffs;
+                    var isImage = prevIndexOffs + 0x1B <= indexOffs;
+                    var isScript = prevIndexOffs + 2 <= indexOffs;
                     if (isImage || isScript)
                     {
                         // Check for image                        
                         loadStream.Position = prevIndexOffs;
-                        UInt16 script;
+                        ushort script;
                         if (!isImage)
                         {
-                            loadStream.Read(addressBuffer, 0, 2);
-                            script = (UInt16)ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 2, true);
+                            if (2 != loadStream.Read(addressBuffer[..2]))
+                                throw new FileTypeLoadException("Archive not long enough to read script!");
+                            script = (ushort)ArrayUtils.ReadIntFromByteArray(addressBuffer[..2], true);
                         }
                         else
                         {
-                            loadStream.Read(addressBuffer, 0, 4);
-                            UInt32 magic01 = (UInt32) ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 4, true);
-                            script = (UInt16)ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 2, true);
+                            if (addressBuffer.Length != loadStream.Read(addressBuffer))
+                                throw new FileTypeLoadException("Archive not long enough to read magic!");
+                            var magic01 = (uint)ArrayUtils.ReadIntFromByteArray(addressBuffer, true);
+                            script = (ushort)ArrayUtils.ReadIntFromByteArray(addressBuffer[..2], true);
                             loadStream.Position = prevIndexOffs + 0x12;
-                            loadStream.Read(addressBuffer, 0, 4);
-                            UInt32 magic02 = (UInt32) ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 4, true);
+                            if (addressBuffer.Length != loadStream.Read(addressBuffer))
+                                throw new FileTypeLoadException("Archive not long enough to read magic2!");
+                            var magic02 = (uint)ArrayUtils.ReadIntFromByteArray(addressBuffer, true);
                             isImage = magic01 == 0x01325847 && magic02 == 0x58465053;
                         }
                         isScript = !isImage && script == 0x7E7C;
                         loadStream.Position = readOffs;
                     }
-                    String filename = filesList.Count.ToString("00000000") + "." + (isImage ? "gx2" : (isScript? "txt" : "dat"));
+                    var filename = filesList.Count.ToString("00000000") + "." + (isImage ? "gx2" : (isScript ? "txt" : "dat"));
                     filesList.Add(new ArchiveEntry(filename, archivePath, prevIndexOffs, indexOffs - prevIndexOffs));
                 }
                 readOffs += 4;
@@ -79,29 +80,29 @@ namespace LibrarianTool.Domain.Archives
             return filesList;
         }
 
-        public override String GetInternalFilename(String filePath)
+        public override string GetInternalFilename(string filePath)
         {
             return Path.GetFileName(filePath);
         }
 
-        public override Boolean SaveArchive(Archive archive, Stream saveStream, String savePath)
+        public override bool SaveArchive(Archive archive, Stream saveStream, string savePath)
         {
-            ArchiveEntry[] entries = archive.FilesList.ToArray();
-            Int32 firstFileOffset = (entries.Length + 2) * 4;
-            Int32 fileOffset = firstFileOffset;
-            using (BinaryWriter bw = new BinaryWriter(new NonDisposingStream(saveStream)))
+            var entries = archive.FilesList.ToArray();
+            var firstFileOffset = (entries.Length + 2) * 4;
+            var fileOffset = firstFileOffset;
+            using (var bw = new BinaryWriter(new NonDisposingStream(saveStream)))
             {
-                bw.Write((UInt32)0);
-                foreach (ArchiveEntry entry in entries)
+                bw.Write((uint)0);
+                foreach (var entry in entries)
                 {
-                    Int32 fileLength = entry.Length;
+                    var fileLength = entry.Length;
                     if (entry.PhysicalPath != null)
                     {
                         // To be 100% sure the index is OK, this is updated at the moment of writing.
-                        FileInfo fi = new FileInfo(entry.PhysicalPath);
+                        var fi = new FileInfo(entry.PhysicalPath);
                         if (!fi.Exists)
                             throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
-                        fileLength = (Int32)fi.Length;
+                        fileLength = (int)fi.Length;
                     }
                     bw.Write(fileOffset);
                     fileOffset += fileLength;
@@ -110,7 +111,7 @@ namespace LibrarianTool.Domain.Archives
             }
             if (firstFileOffset != saveStream.Position)
                 throw new IndexOutOfRangeException("Programmer error: write start offset does not match end of index.");
-            foreach (ArchiveEntry entry in entries)
+            foreach (var entry in entries)
                 CopyEntryContentsToStream(entry, saveStream);
             return true;
         }

@@ -5,25 +5,25 @@ namespace LibrarianTool.Domain
 {
     public class ArchiveEntry : IEquatable<ArchiveEntry>
     {
-        public String PhysicalPath { get; set; }
-        public String FileName { get; set; }
-        public String HashedFilename { get; set; }
+        public string PhysicalPath { get; set; }
+        public string FileName { get; set; }
+        public string HashedFilename { get; set; }
         public HashType HashType { get; set; }
-        public String ArchivePath { get; set; }
-        public Int32 StartOffset { get; set; }
-        public Int32 Length { get; set; }
-        public String ExtraInfo { get; set; }
-        public Byte[] ExtraInfoBin { get; set; }
-        public Boolean IsFolder { get; set; }
+        public string ArchivePath { get; set; }
+        public int StartOffset { get; set; }
+        public int Length { get; set; }
+        public string ExtraInfo { get; set; }
+        public byte[] ExtraInfoBin { get; set; }
+        public bool IsFolder { get; set; }
         public DateTime? Date { get; set; }
 
-        public ArchiveEntry ()
+        public ArchiveEntry()
         {
             this.StartOffset = -1;
             this.Length = -1;
         }
 
-        public ArchiveEntry(String physicalPath)
+        public ArchiveEntry(string physicalPath)
         {
             this.PhysicalPath = physicalPath;
             this.FileName = Path.GetFileName(physicalPath);
@@ -31,7 +31,7 @@ namespace LibrarianTool.Domain
             this.Length = -1;
         }
 
-        public ArchiveEntry(String physicalPath, String storedFilename)
+        public ArchiveEntry(string physicalPath, string storedFilename)
         {
             this.PhysicalPath = physicalPath;
             this.FileName = storedFilename;
@@ -39,7 +39,7 @@ namespace LibrarianTool.Domain
             this.Length = -1;
         }
 
-        public ArchiveEntry(String physicalPath, String storedFilename, String extraInfo)
+        public ArchiveEntry(string physicalPath, string storedFilename, string extraInfo)
         {
             this.PhysicalPath = physicalPath;
             this.FileName = storedFilename;
@@ -55,7 +55,7 @@ namespace LibrarianTool.Domain
         /// <param name="archivePath">Path of the archive</param>
         /// <param name="startOffset">Start offset</param>
         /// <param name="length">Length</param>
-        public ArchiveEntry(String fileName, String archivePath, Int32 startOffset, Int32 length)
+        public ArchiveEntry(string fileName, string archivePath, int startOffset, int length)
         {
             this.FileName = fileName;
             this.ArchivePath = archivePath;
@@ -70,7 +70,7 @@ namespace LibrarianTool.Domain
         /// <param name="archivePath">Path of the archive</param>
         /// <param name="startOffset">Start offset</param>
         /// <param name="length">Length</param>
-        public ArchiveEntry(String fileName, String archivePath, Int32 startOffset, Int32 length, String extraInfo)
+        public ArchiveEntry(string fileName, string archivePath, int startOffset, int length, string extraInfo)
         {
             this.FileName = fileName;
             this.ArchivePath = archivePath;
@@ -87,7 +87,7 @@ namespace LibrarianTool.Domain
         /// <param name="archivePath">Path of the archive</param>
         /// <param name="startOffset">Start offset</param>
         /// <param name="length">Length</param>
-        public ArchiveEntry(String hashedFilename, HashType hashType, String archivePath, Int32 startOffset, Int32 length)
+        public ArchiveEntry(string hashedFilename, HashType hashType, string archivePath, int startOffset, int length)
         {
             this.HashedFilename = hashedFilename;
             this.HashType = hashType;
@@ -105,7 +105,7 @@ namespace LibrarianTool.Domain
         /// <param name="archivePath">Path of the archive</param>
         /// <param name="startOffset">Start offset</param>
         /// <param name="length">Length</param>
-        public ArchiveEntry(String fileName, String hashedFilename, HashType hashType, String archivePath, Int32 startOffset, Int32 length)
+        public ArchiveEntry(string fileName, string hashedFilename, HashType hashType, string archivePath, int startOffset, int length)
         {
             this.FileName = fileName;
             this.HashedFilename = hashedFilename;
@@ -115,12 +115,12 @@ namespace LibrarianTool.Domain
             this.Length = length;
         }
 
-        public override String ToString()
+        public override string ToString()
         {
-            return (this.PhysicalPath != null ? "[" : String.Empty) + (this.FileName ?? this.HashedFilename ?? Path.GetFileName(this.PhysicalPath)) + (this.PhysicalPath != null ? "]" : String.Empty);
+            return (this.PhysicalPath != null ? "[" : string.Empty) + (this.FileName ?? this.HashedFilename ?? Path.GetFileName(this.PhysicalPath)) + (this.PhysicalPath != null ? "]" : string.Empty);
         }
 
-        public Boolean Equals(ArchiveEntry other)
+        public bool Equals(ArchiveEntry other)
         {
             if (other == null)
                 return false;
@@ -128,7 +128,7 @@ namespace LibrarianTool.Domain
             return this.FileName == other.FileName &&
                    this.HashedFilename == other.HashedFilename &&
                    this.HashType == other.HashType &&
-                   String.Equals(this.ArchivePath, other.ArchivePath, StringComparison.InvariantCultureIgnoreCase) &&
+                   string.Equals(this.ArchivePath, other.ArchivePath, StringComparison.InvariantCultureIgnoreCase) &&
                    this.StartOffset == other.StartOffset &&
                    this.Length == other.Length;
         }

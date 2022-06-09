@@ -1,67 +1,67 @@
-﻿using System;
+﻿using Nyerguds.Util;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Collections.Generic;
-using Nyerguds.Util;
 
 namespace LibrarianTool.Domain.Archives
 {
     public class ArchiveLibV1 : Archive
     {
         // "LIB" + 0x1A
-        private static readonly Byte[] IdBytesLib = { 0x4C, 0x49, 0x42, 0x1A };
+        static readonly byte[] IdBytesLib = { 0x4C, 0x49, 0x42, 0x1A };
 
-        public override String ShortTypeName { get { return "Mythos LIB Archive v1"; } }
-        public override String ShortTypeDescription { get { return "Mythos LIB v1"; } }
-        public override String[] FileExtensions { get { return new String[] { "LIB" }; } }
-        
-        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, String archivePath)
+        public override string ShortTypeName => "Mythos LIB Archive v1";
+        public override string ShortTypeDescription => "Mythos LIB v1";
+        public override string[] FileExtensions { get { return new[] { "LIB" }; } }
+
+        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
         {
-            Int32 files = this.GetFilesCount(loadStream, IdBytesLib);
-            return this.LoadLibArchive(loadStream, files, archivePath);
+            var files = this.GetFilesCount(loadStream, IdBytesLib);
+            return LoadLibArchive(loadStream, files, archivePath);
         }
 
-        protected Int32 GetFilesCount(Stream loadStream, Byte[] idBytes)
+        protected int GetFilesCount(Stream loadStream, byte[] idBytes)
         {
             loadStream.Position = 0;
             if (loadStream.Length < idBytes.Length + 2)
                 throw new FileTypeLoadException("Too short to be a " + this.ShortTypeDescription + " archive.");
-            Byte[] testArray = new Byte[idBytes.Length];
+            var testArray = new byte[idBytes.Length];
             loadStream.Read(testArray, 0, testArray.Length);
             if (!testArray.SequenceEqual(idBytes))
                 throw new FileTypeLoadException("Not a " + this.ShortTypeDescription + " archive.");
-            Int32 files = loadStream.ReadByte() | (loadStream.ReadByte() << 8);
+            var files = loadStream.ReadByte() | (loadStream.ReadByte() << 8);
             if (files == 0)
                 throw new FileTypeLoadException("No files in archive.");
             return files;
         }
 
-        protected List<ArchiveEntry> LoadLibArchive(Stream loadStream, Int32 files, String archivePath)
+        protected static List<ArchiveEntry> LoadLibArchive(Stream loadStream, int files, string archivePath)
         {
-            Int64 end = loadStream.Length;
-            Int32 fileEntries = files + 1;
-            Encoding enc = Encoding.GetEncoding(437);
-            const Int32 fileEntryLength = 0x11;
-            Byte[] buffer = new Byte[fileEntryLength];
-            String previousEntryName = null;
-            Int32 previousEntryStart = 0;
-            List<ArchiveEntry> filesList = new List<ArchiveEntry>();
+            var end = loadStream.Length;
+            var fileEntries = files + 1;
+            var enc = Encoding.GetEncoding(437);
+            const int fileEntryLength = 0x11;
+            var buffer = new byte[fileEntryLength];
+            string previousEntryName = null;
+            var previousEntryStart = 0;
+            var filesList = new List<ArchiveEntry>();
             //Console.Write("Reading archive entries...");
-            for (Int32 i = 0; i < fileEntries; i++)
+            for (var i = 0; i < fileEntries; i++)
             {
                 if (loadStream.Position + fileEntryLength > end)
                     throw new FileTypeLoadException("File too short for full header.");
                 loadStream.Read(buffer, 0, fileEntryLength);
-                String curName = enc.GetString(buffer.Take(13).TakeWhile(x => x != 0).ToArray()).Trim();
-                Int32 curEntryStart = (buffer[0x0D]) | (buffer[0x0E] << 8) | (buffer[0x0F] << 0x10) | (buffer[0x10] << 0x18);
-                Boolean isEnd = curEntryStart == end;
+                var curName = enc.GetString(buffer.Take(13).TakeWhile(x => x != 0).ToArray()).Trim();
+                var curEntryStart = (buffer[0x0D]) | (buffer[0x0E] << 8) | (buffer[0x0F] << 0x10) | (buffer[0x10] << 0x18);
+                var isEnd = curEntryStart == end;
                 if (curEntryStart > end || curEntryStart < 0)
                     throw new FileTypeLoadException("Archive entry outside file bounds!");
-                if (!String.IsNullOrEmpty(previousEntryName) && previousEntryStart != 0)
+                if (!string.IsNullOrEmpty(previousEntryName) && previousEntryStart != 0)
                 {
-                    Int32 entryLength = curEntryStart - previousEntryStart;
-                    ArchiveEntry archiveEntry = new ArchiveEntry(previousEntryName, archivePath, previousEntryStart, entryLength);
+                    var entryLength = curEntryStart - previousEntryStart;
+                    var archiveEntry = new ArchiveEntry(previousEntryName, archivePath, previousEntryStart, entryLength);
                     filesList.Add(archiveEntry);
                 }
                 else if (i != 0)
@@ -75,51 +75,51 @@ namespace LibrarianTool.Domain.Archives
             return filesList;
         }
 
-        public override Boolean SaveArchive(Archive archive, Stream saveStream, String savePath)
+        public override bool SaveArchive(Archive archive, Stream saveStream, string savePath)
         {
-            this.SaveHeader(archive, saveStream, IdBytesLib);
+            SaveHeader(archive, saveStream, IdBytesLib);
             return this.SaveLibArchive(archive, saveStream);
         }
 
-        protected void SaveHeader(Archive archive, Stream saveStream, Byte[] idBytes)
+        protected static void SaveHeader(Archive archive, Stream saveStream, byte[] idBytes)
         {
             saveStream.Write(idBytes, 0, idBytes.Length);
-            Byte[] numBuf = new Byte[2];
-            ArrayUtils.WriteIntToByteArray(numBuf, 0, 2, true, (UInt32)archive.FilesList.Count);
+            var numBuf = new byte[2];
+            ArrayUtils.WriteIntToByteArray(numBuf, 0, 2, true, (uint)archive.FilesList.Count);
             saveStream.Write(numBuf, 0, 2);
         }
 
-        protected Boolean SaveLibArchive(Archive archive, Stream saveStream)
+        protected bool SaveLibArchive(Archive archive, Stream saveStream)
         {
-            ArchiveEntry[] entries = archive.FilesList.ToArray();
-            const Int32 fileEntryLength = 0x11;
-            Byte[] buffer = new Byte[fileEntryLength];
-            Encoding enc = Encoding.GetEncoding(437);
-            Int32 curEntryStart = (Int32)saveStream.Position + (entries.Length + 1) * buffer.Length;
-            foreach (ArchiveEntry entry in entries)
+            var entries = archive.FilesList.ToArray();
+            const int fileEntryLength = 0x11;
+            var buffer = new byte[fileEntryLength];
+            var enc = Encoding.GetEncoding(437);
+            var curEntryStart = (int)saveStream.Position + (entries.Length + 1) * buffer.Length;
+            foreach (var entry in entries)
             {
-                Int32 fileLength = entry.Length;
+                var fileLength = entry.Length;
                 if (entry.PhysicalPath != null)
                 {
-                    FileInfo fi = new FileInfo(entry.PhysicalPath);
+                    var fi = new FileInfo(entry.PhysicalPath);
                     if (!fi.Exists)
                         throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
-                    fileLength = (Int32) fi.Length;
+                    fileLength = (int)fi.Length;
                 }
-                String curName = this.GetInternalFilename(entry.FileName);
-                Int32 copySize = Math.Min(curName.Length, 12);
+                var curName = this.GetInternalFilename(entry.FileName);
+                var copySize = Math.Min(curName.Length, 12);
                 Array.Copy(enc.GetBytes(curName), 0, buffer, 0, copySize);
-                for (Int32 b = copySize; b <= 13; b++)
+                for (var b = copySize; b <= 13; b++)
                     buffer[b] = 0;
-                ArrayUtils.WriteIntToByteArray(buffer, 13, 4, true, (UInt32) curEntryStart);
+                ArrayUtils.WriteIntToByteArray(buffer, 13, 4, true, (uint)curEntryStart);
                 curEntryStart += fileLength;
                 saveStream.Write(buffer, 0, fileEntryLength);
             }
-            for (Int32 b = 0; b < 13; b++)
+            for (var b = 0; b < 13; b++)
                 buffer[b] = 0;
-            ArrayUtils.WriteIntToByteArray(buffer, 13, 4, true, (UInt32)curEntryStart);
+            ArrayUtils.WriteIntToByteArray(buffer, 13, 4, true, (uint)curEntryStart);
             saveStream.Write(buffer, 0, fileEntryLength);
-            foreach (ArchiveEntry entry in entries)
+            foreach (var entry in entries)
                 CopyEntryContentsToStream(entry, saveStream);
             return true;
         }

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 
 namespace Nyerguds.Util.UI
@@ -30,26 +27,28 @@ namespace Nyerguds.Util.UI
         static extern IntPtr GetDlgItem(IntPtr hDlg, int nIDDlgItem);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
+        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         /// <summary>
         /// Some of the messages that the Tree View control will respond to
         /// </summary>
-        private const int TV_FIRST = 0x1100;
-        private const int TVM_SELECTITEM = (TV_FIRST + 11);
-        private const int TVM_GETNEXTITEM = (TV_FIRST + 10);
-        private const int TVM_GETITEM = (TV_FIRST + 12);
-        private const int TVM_ENSUREVISIBLE = (TV_FIRST + 20);
+        const int TV_FIRST = 0x1100;
+
+        const int TVM_SELECTITEM = (TV_FIRST + 11);
+        const int TVM_GETNEXTITEM = (TV_FIRST + 10);
+        const int TVM_GETITEM = (TV_FIRST + 12);
+        const int TVM_ENSUREVISIBLE = (TV_FIRST + 20);
 
         /// <summary>
         /// Constants used to identity specific items in the Tree View control
         /// </summary>
-        private const int TVGN_ROOT = 0x0;
-        private const int TVGN_NEXT = 0x1;
-        private const int TVGN_CHILD = 0x4;
-        private const int TVGN_FIRSTVISIBLE = 0x5;
-        private const int TVGN_NEXTVISIBLE = 0x6;
-        private const int TVGN_CARET = 0x9;
+        const int TVGN_ROOT = 0x0;
+
+        const int TVGN_NEXT = 0x1;
+        const int TVGN_CHILD = 0x4;
+        const int TVGN_FIRSTVISIBLE = 0x5;
+        const int TVGN_NEXTVISIBLE = 0x6;
+        const int TVGN_CARET = 0x9;
 
 
         /// <summary>
@@ -60,60 +59,58 @@ namespace Nyerguds.Util.UI
         /// <param name="dlg"></param>
         /// <param name="parent"></param>
         /// <returns></returns>
-        public static DialogResult ShowFolderBrowser(FolderBrowserDialog dlg, Boolean selectTree, IWin32Window parent = null)
+        public static DialogResult ShowFolderBrowser(FolderBrowserDialog dlg, bool selectTree, IWin32Window parent = null)
         {
-            DialogResult result = DialogResult.Cancel;
-            int retries = 10;
+            var result = DialogResult.Cancel;
+            var retries = 10;
 
-            using (Timer t = new Timer())
+            using var t = new Timer();
+            t.Tick += (s, a) =>
             {
-                t.Tick += (s, a) =>
+                if (retries > 0)
                 {
-                    if (retries > 0)
+                    --retries;
+                    var hwndDlg = FindWindow(null, _topLevelSearchString);
+                    if (hwndDlg != IntPtr.Zero)
                     {
-                        --retries;
-                        IntPtr hwndDlg = FindWindow((string)null, _topLevelSearchString);
-                        if (hwndDlg != IntPtr.Zero)
+                        var hwndFolderCtrl = GetDlgItem(hwndDlg, _dlgItemBrowseControl);
+                        if (hwndFolderCtrl != IntPtr.Zero)
                         {
-                            IntPtr hwndFolderCtrl = GetDlgItem(hwndDlg, _dlgItemBrowseControl);
-                            if (hwndFolderCtrl != IntPtr.Zero)
+                            var hwndTV = GetDlgItem(hwndFolderCtrl, _dlgItemTreeView);
+
+                            if (hwndTV != IntPtr.Zero)
                             {
-                                IntPtr hwndTV = GetDlgItem(hwndFolderCtrl, _dlgItemTreeView);
-
-                                if (hwndTV != IntPtr.Zero)
+                                var item = SendMessage(hwndTV, TVM_GETNEXTITEM, new IntPtr(TVGN_CARET), IntPtr.Zero);
+                                if (item != IntPtr.Zero)
                                 {
-                                    IntPtr item = SendMessage(hwndTV, (uint)TVM_GETNEXTITEM, new IntPtr(TVGN_CARET), IntPtr.Zero);
-                                    if (item != IntPtr.Zero)
-                                    {
-                                        SendMessage(hwndTV, TVM_ENSUREVISIBLE, IntPtr.Zero, item);
-                                        retries = 0;
-                                        t.Stop();
-                                        if (selectTree)
-                                            SendKeys.Send("{TAB}{TAB}");
+                                    SendMessage(hwndTV, TVM_ENSUREVISIBLE, IntPtr.Zero, item);
+                                    retries = 0;
+                                    t.Stop();
+                                    if (selectTree)
+                                        SendKeys.Send("{TAB}{TAB}");
 
-                                    }
                                 }
                             }
                         }
                     }
+                }
 
-                    else
-                    {
-                        //
-                        //  We failed to find the Tree View control.
-                        //
-                        //  As a fall back (and this is an UberUgly hack), we will send
-                        //  some fake keystrokes to the application in an attempt to force
-                        //  the Tree View to scroll to the selected item.
-                        //
-                        t.Stop();
-                        SendKeys.Send("{TAB}{TAB}{DOWN}{DOWN}{UP}{UP}");
-                    }
-                };
-                t.Interval = 10;
-                t.Start();
-                result = dlg.ShowDialog(parent);
-            }
+                else
+                {
+                    //
+                    //  We failed to find the Tree View control.
+                    //
+                    //  As a fall back (and this is an UberUgly hack), we will send
+                    //  some fake keystrokes to the application in an attempt to force
+                    //  the Tree View to scroll to the selected item.
+                    //
+                    t.Stop();
+                    SendKeys.Send("{TAB}{TAB}{DOWN}{DOWN}{UP}{UP}");
+                }
+            };
+            t.Interval = 10;
+            t.Start();
+            result = dlg.ShowDialog(parent);
             return result;
         }
     }

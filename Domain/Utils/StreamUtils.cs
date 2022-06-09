@@ -5,21 +5,21 @@ namespace Nyerguds.Util
 {
     public static class StreamUtils
     {
-        public static Boolean JumpToNextMatch(this Stream stream, Byte[] searchBytes)
+        public static bool JumpToNextMatch(this Stream stream, byte[] searchBytes)
         {
             if (searchBytes == null)
-                throw new ArgumentNullException("searchBytes");
+                throw new ArgumentNullException(nameof(searchBytes));
             return JumpToNextMatch(stream, -1, searchBytes, -1);
         }
 
-        public static Boolean JumpToNextMatch(this Stream stream, Int32 position, Byte[] searchBytes)
+        public static bool JumpToNextMatch(this Stream stream, int position, byte[] searchBytes)
         {
             if (searchBytes == null)
-                throw new ArgumentNullException("searchBytes");
+                throw new ArgumentNullException(nameof(searchBytes));
             return JumpToNextMatch(stream, position, searchBytes, -1);
         }
 
-        public static Boolean JumpToNextMatch(this Stream stream, Byte[] searchBytes, Int32 searchBufferLength)
+        public static bool JumpToNextMatch(this Stream stream, byte[] searchBytes, int searchBufferLength)
         {
             return JumpToNextMatch(stream, -1, searchBytes, searchBufferLength);
         }
@@ -34,39 +34,39 @@ namespace Nyerguds.Util
         /// <param name="searchBytes">Bytes to find.</param>
         /// <param name="searchBufferLength">Search buffer length. When -1 is given, this defaults to 64k, or 10 times the length of <ref>searchBytes</ref> if that is larger.</param>
         /// <returns>The location of the next patch in the stream, or -1 if no match was found.</returns>
-        public static Boolean JumpToNextMatch(this Stream stream, Int64 position, Byte[] searchBytes, Int32 searchBufferLength)
+        public static bool JumpToNextMatch(this Stream stream, long position, byte[] searchBytes, int searchBufferLength)
         {
             if (stream == null)
-                throw new ArgumentNullException("stream");
+                throw new ArgumentNullException(nameof(stream));
             if (position >= stream.Length)
-                throw new ArgumentOutOfRangeException("position", "Offset beyond end of stream.");
+                throw new ArgumentOutOfRangeException(nameof(position), "Offset beyond end of stream.");
             if (searchBytes == null)
-                throw new ArgumentNullException("searchBytes");
+                throw new ArgumentNullException(nameof(searchBytes));
             if (!stream.CanSeek)
                 throw new ArgumentException("this stream does not allow seeking!");
             if (position != -1)
                 stream.Position = position;
-            Int64 currentIndex = stream.Position;
-            Int32 matchLength = searchBytes.Length;
+            var currentIndex = stream.Position;
+            var matchLength = searchBytes.Length;
             if (matchLength == 0)
                 return true;
             if (searchBufferLength == -1)
                 searchBufferLength = Math.Max(0x10000, searchBytes.Length * 10);
             searchBufferLength = Math.Max(searchBufferLength, matchLength);
-            Int32 buff2Len = matchLength - 1;
-            Int32 skipLength = searchBufferLength - buff2Len;
-            Byte[] buffer = new Byte[searchBufferLength];
-            Byte[] buffer2 = new Byte[buff2Len];
-            Int32 searchLength = stream.Read(buffer, 0, searchBufferLength);
-            Byte startByte = searchBytes[0];
+            var buff2Len = matchLength - 1;
+            var skipLength = searchBufferLength - buff2Len;
+            var buffer = new byte[searchBufferLength];
+            var buffer2 = new byte[buff2Len];
+            var searchLength = stream.Read(buffer, 0, searchBufferLength);
+            var startByte = searchBytes[0];
             while (searchLength >= matchLength)
             {
-                for (Int32 i = 0; i < skipLength; i++)
+                for (var i = 0; i < skipLength; i++)
                 {
                     if (buffer[i] != startByte)
                         continue;
-                    Int32 currentPos = i + 1;
-                    Int32 foundIndex;
+                    var currentPos = i + 1;
+                    int foundIndex;
                     for (foundIndex = 1; foundIndex < matchLength; foundIndex++)
                         if (buffer[currentPos++] != searchBytes[foundIndex])
                             break;
@@ -93,7 +93,7 @@ namespace Nyerguds.Util
         /// <param name="stream">Stream to check.</param>
         /// <param name="toMatch">Bytes to match.</param>
         /// <returns>True if the bytes following the current position match the bytes in the given array.</returns>
-        public static Boolean MatchAtCurrentPos(this Stream stream, Byte[] toMatch)
+        public static bool MatchAtCurrentPos(this Stream stream, byte[] toMatch)
         {
             return MatchAtPos(stream, -1, toMatch);
         }
@@ -107,32 +107,32 @@ namespace Nyerguds.Util
         /// <param name="position">Position. Use -1 to keep the original position.</param>
         /// <param name="toMatch">Bytes to match.</param>
         /// <returns>True if the bytes following the specified position match the bytes in the given array.</returns>
-        public static Boolean MatchAtPos(this Stream stream, Int64 position, Byte[] toMatch)
+        public static bool MatchAtPos(this Stream stream, long position, byte[] toMatch)
         {
             if (stream == null)
-                throw new ArgumentNullException("stream");
-            Int64 streamLen = stream.Length;
+                throw new ArgumentNullException(nameof(stream));
+            var streamLen = stream.Length;
             if (position >= streamLen)
-                throw new ArgumentOutOfRangeException("position", "Position beyond end of stream.");
+                throw new ArgumentOutOfRangeException(nameof(position), "Position beyond end of stream.");
             if (position < -1)
-                throw new ArgumentOutOfRangeException("position", "Position is a negative number.");
+                throw new ArgumentOutOfRangeException(nameof(position), "Position is a negative number.");
             if (toMatch == null)
-                throw new ArgumentNullException("toMatch");
+                throw new ArgumentNullException(nameof(toMatch));
             if (position != -1)
                 stream.Position = position;
             else
                 position = stream.Position;
-            Int32 matchLength = toMatch.Length;
+            var matchLength = toMatch.Length;
             if (matchLength == 0)
                 return true;
             if (position + matchLength >= streamLen)
                 return false;
-            Byte[] checkArr = new Byte[toMatch.Length];
-            Int32 readLen = stream.Read(checkArr, 0, matchLength);
+            var checkArr = new byte[toMatch.Length];
+            var readLen = stream.Read(checkArr, 0, matchLength);
             stream.Position = position;
             if (readLen != matchLength)
                 return false;
-            for (Int32 i = 0; i < matchLength; ++i)
+            for (var i = 0; i < matchLength; ++i)
                 if (checkArr[i] != toMatch[i])
                     return false;
             return true;

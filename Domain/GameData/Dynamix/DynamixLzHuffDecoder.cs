@@ -31,25 +31,25 @@ namespace Nyerguds.GameData.Dynamix
           don't know what environment it will be running on.
     **************************************************************/
 
-// Thanks to: NewRisingSun
+        // Thanks to: NewRisingSun
 
-/********** LZSS compression **********/
+        /********** LZSS compression **********/
 
-        private const Int32 N = 4096; /* buffer size */
-        private const Int32 F = 60; /* lookahead buffer size */
-        private const Int32 Threshold = 2;
-        private const Int32 Nil = N; /* leaf of tree */
+        const int N = 4096; /* buffer size */
+        const int F = 60; /* lookahead buffer size */
+        const int Threshold = 2;
+        const int Nil = N; /* leaf of tree */
 
-        private Byte[] _textBuf = new Byte[N + F - 1];
-        private Int32 _matchPosition;
-        private Int32 _matchLength;
-        private Int32[] _lson = new Int32[N + 1];
-        private Int32[] _rson = new Int32[N + 257];
-        private Int32[] _dad = new Int32[N + 1];
+        readonly byte[] _textBuf = new byte[N + F - 1];
+        int _matchPosition;
+        int _matchLength;
+        readonly int[] _lson = new int[N + 1];
+        readonly int[] _rson = new int[N + 257];
+        readonly int[] _dad = new int[N + 1];
 
-        private void InitTree() /* initialize trees */
+        void InitTree() /* initialize trees */
         {
-            Int32 i;
+            int i;
 
             for (i = N + 1; i <= N + 256; i++)
                 this._rson[i] = Nil; /* root */
@@ -57,14 +57,14 @@ namespace Nyerguds.GameData.Dynamix
                 this._dad[i] = Nil; /* node */
         }
 
-        private void InsertNode(Int32 r) /* insert to tree */
+        void InsertNode(int r) /* insert to tree */
         {
-            Int32 cmp = 1;
-            Int32 key = r;
-            Int32 p = N + 1 + this._textBuf[key];
+            var cmp = 1;
+            var key = r;
+            var p = N + 1 + this._textBuf[key];
             this._rson[r] = this._lson[r] = Nil;
             this._matchLength = 0;
-            for (;;)
+            for (; ; )
             {
                 if (cmp >= 0)
                 {
@@ -88,7 +88,7 @@ namespace Nyerguds.GameData.Dynamix
                         return;
                     }
                 }
-                Int32 i;
+                int i;
                 for (i = 1; i < F; i++)
                     if ((cmp = this._textBuf[key + i] - this._textBuf[p + i]) != 0)
                         break;
@@ -102,10 +102,10 @@ namespace Nyerguds.GameData.Dynamix
                     }
                     if (i == this._matchLength)
                     {
-                        UInt32 c;
-                        if ((c = (UInt32) ((r - p) & (N - 1)) - 1) < (UInt32) this._matchPosition)
+                        uint c;
+                        if ((c = (uint)((r - p) & (N - 1)) - 1) < (uint)this._matchPosition)
                         {
-                            this._matchPosition = (Int32) c;
+                            this._matchPosition = (int)c;
                         }
                     }
                 }
@@ -122,9 +122,9 @@ namespace Nyerguds.GameData.Dynamix
             this._dad[p] = Nil; /* remove p */
         }
 
-        private void DeleteNode(Int32 p) /* remove from tree */
+        void DeleteNode(int p) /* remove from tree */
         {
-            Int32 q;
+            int q;
 
             if (this._dad[p] == Nil)
                 return; /* not registered */
@@ -157,20 +157,20 @@ namespace Nyerguds.GameData.Dynamix
             this._dad[p] = Nil;
         }
 
-/* Huffman coding */
+        /* Huffman coding */
 
-        private const Int32 NChar = (256 - Threshold + F);
+        const int NChar = (256 - Threshold + F);
         /* kinds of characters (character code = 0..N_CHAR-1) */
-        private const Int32 T = (NChar * 2 - 1); /* size of table */
-        private const Int32 R = (T - 1); /* position of root */
-        private const Int32 MaxFreq = 0x8000; /* updates tree when the */
+        const int T = (NChar * 2 - 1); /* size of table */
+        const int R = (T - 1); /* position of root */
+        const int MaxFreq = 0x8000; /* updates tree when the */
 
-/* table for decoding the upper 6 bits of position */
+        /* table for decoding the upper 6 bits of position */
 
-/* for decoding */
+        /* for decoding */
 
-        private Byte[] _dCode =
-        {
+        readonly byte[] _dCode =
+                {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -205,8 +205,8 @@ namespace Nyerguds.GameData.Dynamix
             0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E, 0x3F,
         };
 
-        private Byte[] _dLen =
-        {
+        readonly byte[] _dLen =
+                {
             0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
             0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
             0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03,
@@ -241,23 +241,23 @@ namespace Nyerguds.GameData.Dynamix
             0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08,
         };
 
-        private UInt32[] _freq = new UInt32[T + 1]; /* frequency table */
+        readonly uint[] _freq = new uint[T + 1]; /* frequency table */
 
-        private Int32[] _prnt = new Int32[T + NChar]; /* pointers to parent nodes, except for the */
+        readonly int[] _prnt = new int[T + NChar]; /* pointers to parent nodes, except for the */
         /* elements [T..T + N_CHAR - 1] which are used to get */
         /* the positions of leaves corresponding to the codes. */
 
-        private Int32[] _son = new Int32[T]; /* pointers to child nodes (son[], son[] + 1) */
+        readonly int[] _son = new int[T]; /* pointers to child nodes (son[], son[] + 1) */
 
-        private UInt32 _getbuf;
-        private Byte _getlen;
+        uint _getbuf;
+        byte _getlen;
 
-        private Int32 GetBit() /* get one bit */
+        int GetBit() /* get one bit */
         {
-            UInt32 i;
+            uint i;
             while (this._getlen <= 8)
             {
-                if ((Int32) (i = this.get_bits_left(8)) < 0)
+                if ((int)(i = this.get_bits_left(8)) < 0)
                     i = 0;
                 this._getbuf |= (i << (8 - this._getlen));
                 this._getlen += 8;
@@ -265,40 +265,40 @@ namespace Nyerguds.GameData.Dynamix
             i = this._getbuf;
             this._getbuf <<= 1;
             this._getlen--;
-            return (Int32) ((i & 0x8000) >> 15);
+            return (int)((i & 0x8000) >> 15);
         }
 
-        private Int32 GetByte() /* get one byte */
+        int GetByte() /* get one byte */
         {
-            UInt32 i;
+            uint i;
 
             while (this._getlen <= 8)
             {
-                if ((Int32) (i = this.get_bits_left(8)) < 0) i = 0;
+                if ((int)(i = this.get_bits_left(8)) < 0) i = 0;
                 this._getbuf |= i << (8 - this._getlen);
                 this._getlen += 8;
             }
             i = this._getbuf;
             this._getbuf <<= 8;
             this._getlen -= 8;
-            return (Int32) ((i & 0xff00) >> 8);
+            return (int)((i & 0xff00) >> 8);
         }
 
 
-/* initialization of tree */
+        /* initialization of tree */
 
-        private void StartHuff()
+        void StartHuff()
         {
 
 
-            for (Int32 index = 0; index < NChar; index++)
+            for (var index = 0; index < NChar; index++)
             {
                 this._freq[index] = 1;
                 this._son[index] = index + T;
                 this._prnt[index + T] = index;
             }
-            Int32 i = 0;
-            Int32 j = NChar;
+            var i = 0;
+            var j = NChar;
             while (j <= R)
             {
                 this._freq[j] = this._freq[i] + this._freq[i + 1];
@@ -312,16 +312,16 @@ namespace Nyerguds.GameData.Dynamix
         }
 
 
-/* reconstruction of tree */
+        /* reconstruction of tree */
 
-        private void Reconst()
+        void Reconst()
         {
             /* collect leaf nodes in the first half of the table */
             /* and replace the freq by (freq + 1) / 2. */
 
-            Int32 j = 0;
-            Int32 k;
-            for (Int32 i = 0; i < T; i++)
+            var j = 0;
+            int k;
+            for (var i = 0; i < T; i++)
             {
                 if (this._son[i] >= T)
                 {
@@ -332,20 +332,20 @@ namespace Nyerguds.GameData.Dynamix
             }
             /* begin constructing tree by connecting sons */
             j = NChar;
-            for (Int32 i = 0; j < T; i += 2, j++)
+            for (var i = 0; j < T; i += 2, j++)
             {
                 k = i + 1;
-                UInt32 f = this._freq[j] = this._freq[i] + this._freq[k];
+                var f = this._freq[j] = this._freq[i] + this._freq[k];
                 for (k = j - 1; f < this._freq[k]; k--) ;
                 k++;
-                UInt32 l = (UInt32) (j - k) * 2;
+                var l = (uint)(j - k) * 2;
                 Array.Copy(this._freq, k, this._freq, k + 1, l);
                 this._freq[k] = f;
                 Array.Copy(this._son, k, this._son, k + 1, l);
                 this._son[k] = i;
             }
             /* connect prnt */
-            for (Int32 i = 0; i < T; i++)
+            for (var i = 0; i < T; i++)
             {
                 if ((k = this._son[i]) >= T)
                 {
@@ -358,9 +358,9 @@ namespace Nyerguds.GameData.Dynamix
             }
         }
 
-/* increment frequency of given code by one, and update tree */
+        /* increment frequency of given code by one, and update tree */
 
-        private void Update(Int32 c)
+        void Update(int c)
         {
             if (this._freq[R] == MaxFreq)
             {
@@ -369,21 +369,21 @@ namespace Nyerguds.GameData.Dynamix
             c = this._prnt[c + T];
             do
             {
-                Int32 k = (Int32) (++this._freq[c]);
+                var k = (int)(++this._freq[c]);
                 /* if the order is disturbed, exchange nodes */
-                Int32 l;
-                if ((UInt32) k <= this._freq[l = c + 1])
+                int l;
+                if ((uint)k <= this._freq[l = c + 1])
                     continue;
-                while ((UInt32) k > this._freq[++l]) ;
+                while ((uint)k > this._freq[++l]) ;
                 l--;
                 this._freq[c] = this._freq[l];
-                this._freq[l] = (UInt32) k;
+                this._freq[l] = (uint)k;
 
-                Int32 i = this._son[c];
+                var i = this._son[c];
                 this._prnt[i] = l;
                 if (i < T) this._prnt[i + 1] = l;
 
-                Int32 j = this._son[l];
+                var j = this._son[l];
                 this._son[l] = i;
 
                 this._prnt[j] = c;
@@ -395,44 +395,44 @@ namespace Nyerguds.GameData.Dynamix
         }
 
 
-        private Int32 DecodeByte()
+        int DecodeByte()
         {
-            UInt32 c = (UInt32) this._son[R];
+            var c = (uint)this._son[R];
 
             /* travel from root to leaf, */
             /* choosing the smaller child node (son[]) if the read bit is 0, */
             /* the bigger (son[]+1} if 1 */
             while (c < T)
             {
-                c += (UInt32) this.GetBit();
-                c = (UInt32) this._son[c];
+                c += (uint)this.GetBit();
+                c = (uint)this._son[c];
             }
             c -= T;
-            this.Update((Int32) c);
-            return (Int32) c;
+            this.Update((int)c);
+            return (int)c;
         }
 
 
-        private Int32 DecodePosition()
+        int DecodePosition()
         {
-            UInt32 i, j, c;
+            uint i, j, c;
 
             /* recover upper 6 bits from table */
-            i = (UInt32) this.GetByte();
-            c = (UInt32) this._dCode[i] << 6;
+            i = (uint)this.GetByte();
+            c = (uint)this._dCode[i] << 6;
             j = this._dLen[i];
 
             /* read lower 6 bits verbatim */
             j -= 2;
             while (j-- != 0)
             {
-                i = (UInt32) ((i << 1) + this.GetBit());
+                i = (uint)((i << 1) + this.GetBit());
             }
-            return (Int32) (c | (i & 0x3f));
+            return (int)(c | (i & 0x3f));
         }
 
 
-        private void Reset()
+        void Reset()
         {
             this.InitTree();
             this._getlen = 0;
@@ -440,7 +440,7 @@ namespace Nyerguds.GameData.Dynamix
         }
 
 
-        public Byte[] Decode(Byte[] input, Int32? startOffset, Int32? endOffset, Int32 decompressedSize)
+        public byte[] Decode(byte[] input, int? startOffset, int? endOffset, int decompressedSize)
         {
             this.buf_in = input;
             this.buf_ptr = startOffset ?? 0;
@@ -449,41 +449,41 @@ namespace Nyerguds.GameData.Dynamix
             this.bits_data = 0;
 
 
-            UInt32 outPtr = 0;
-            UInt32 len = (UInt32) decompressedSize;
-            Byte[] bufOut = new Byte[decompressedSize];
+            uint outPtr = 0;
+            var len = (uint)decompressedSize;
+            var bufOut = new byte[decompressedSize];
             if (len == 0)
-                return new Byte[0];
+                return Array.Empty<byte>();
             this.Reset();
             this.StartHuff();
-            for (Int32 i = 0; i < N - F; i++)
+            for (var i = 0; i < N - F; i++)
                 this._textBuf[i] = 0x20;
-            Int32 r = N - F;
-            for (UInt32 count = 0; count < len;)
+            var r = N - F;
+            for (uint count = 0; count < len;)
             {
                 if (outPtr >= decompressedSize)
                     return bufOut;
-                Int32 c = this.DecodeByte();
+                var c = this.DecodeByte();
                 if (c < 256)
                 {
-                    bufOut[outPtr++] = (Byte) c;
+                    bufOut[outPtr++] = (byte)c;
 
-                    this._textBuf[r++] = (Byte) c;
+                    this._textBuf[r++] = (byte)c;
                     r &= (N - 1);
                     count++;
                 }
                 else
                 {
-                    Int32 i = (r - this.DecodePosition() - 1) & (N - 1);
-                    Int32 j = c - 255 + Threshold;
-                    Int32 k;
+                    var i = (r - this.DecodePosition() - 1) & (N - 1);
+                    var j = c - 255 + Threshold;
+                    int k;
                     for (k = 0; k < j; k++)
                     {
                         c = this._textBuf[(i + k) & (N - 1)];
                         if (outPtr >= decompressedSize)
                             return bufOut;
-                        bufOut[outPtr++] = (Byte) c;
-                        this._textBuf[r++] = (Byte) c;
+                        bufOut[outPtr++] = (byte)c;
+                        this._textBuf[r++] = (byte)c;
                         r &= (N - 1);
                         count++;
                     }
@@ -492,28 +492,28 @@ namespace Nyerguds.GameData.Dynamix
             return bufOut;
         }
 
-        private Byte[] buf_in;
-        private Int32 buf_ptr;
-        private Int32 buf_end;
-        private Byte bits_size;
-        private Byte bits_data;
+        byte[] buf_in;
+        int buf_ptr;
+        int buf_end;
+        byte bits_size;
+        byte bits_data;
 
-        private UInt32 get_bits_left(UInt32 totalBits)
+        uint get_bits_left(uint totalBits)
         {
-            Byte[] bitsMask =
+            byte[] bitsMask =
             {
                 0x00, 0x01, 0x03, 0x07, 0x0f,
                 0x1f, 0x3f, 0x7f, 0xff
             };
 
-            UInt32 numBits = totalBits;
-            UInt32 data = 0;
+            var numBits = totalBits;
+            uint data = 0;
 
             while (numBits > 0)
             {
                 // ERROR!
                 if (this.buf_ptr >= this.buf_end)
-                    return UInt32.MaxValue;
+                    return uint.MaxValue;
 
                 // 8-bit buffer
                 if (this.bits_size == 0)
@@ -522,18 +522,18 @@ namespace Nyerguds.GameData.Dynamix
                     this.bits_data = this.buf_in[this.buf_ptr++];
                 }
                 // consume cached bits
-                UInt32 useBits = numBits;
+                var useBits = numBits;
                 if (useBits > 8) useBits = 8;
                 if (useBits > this.bits_size)
                     useBits = this.bits_size;
 
                 // tack on bits
-                data <<= (Int32) useBits;
-                data |= (UInt32) ((this.bits_data >> (Int32) (this.bits_size - useBits)) & bitsMask[useBits]);
+                data <<= (int)useBits;
+                data |= (uint)((this.bits_data >> (int)(this.bits_size - useBits)) & bitsMask[useBits]);
 
                 // update cache data
                 numBits -= useBits;
-                this.bits_size -= (Byte) useBits;
+                this.bits_size -= (byte)useBits;
             }
             return data;
         }

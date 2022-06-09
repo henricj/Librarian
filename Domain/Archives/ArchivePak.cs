@@ -1,68 +1,75 @@
-﻿using System;
+﻿using Nyerguds.Util;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Collections.Generic;
-using Nyerguds.Util;
 
 namespace LibrarianTool.Domain.Archives
 {
     public class ArchivePakV1 : ArchivePak
     {
-        protected override PakVersion PakVer { get { return PakVersion.PakVersion1;} }
+        public ArchivePakV1() : base(PakVersion.PakVersion1) { }
     }
 
     public class ArchivePakV2 : ArchivePak
     {
-        protected override PakVersion PakVer { get { return PakVersion.PakVersion2; } }
+        public ArchivePakV2() : base(PakVersion.PakVersion2) { }
     }
 
     public class ArchivePakV3 : ArchivePak
     {
-        protected override PakVersion PakVer { get { return PakVersion.PakVersion3; } }
+        public ArchivePakV3() : base(PakVersion.PakVersion3) { }
     }
 
     public abstract class ArchivePak : Archive
     {
-        public override String ShortTypeName { get { return "Westwood PAK Archive v" + (Int32)this.PakVer; } }
-        public override String ShortTypeDescription { get { return "Westwood PAK v" + (Int32)this.PakVer; } }
-        public override String[] FileExtensions { get { return new String[] { "PAK" }; } }
-        protected abstract PakVersion PakVer { get; }
+        public override string ShortTypeName { get; }
+        public override string ShortTypeDescription { get; }
+        public override string[] FileExtensions { get; } = { "PAK" };
+        protected PakVersion PakVer { get; }
 
-        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, String archivePath)
+        protected ArchivePak(PakVersion version)
         {
-            UInt32 end = (UInt32)loadStream.Length;
-            Encoding enc = new ASCIIEncoding();
+            PakVer = version;
+            ShortTypeName = "Westwood PAK Archive v" + (int)this.PakVer;
+            ShortTypeDescription = "Westwood PAK v" + (int)this.PakVer;
+        }
+
+        protected override List<ArchiveEntry> LoadArchiveInternal(Stream loadStream, string archivePath)
+        {
+            var end = (uint)loadStream.Length;
             if (end < 4)
                 throw new FileTypeLoadException("Archive not long enough for a single entry.");
-            Byte[] addressBuffer = new Byte[4];
+            Span<byte> addressBuffer = stackalloc byte[4];
             loadStream.Position = 0;
-            this.ExtraInfo = String.Empty;
+            this.ExtraInfo = string.Empty;
             ArchiveEntry curEntry = null;
-            UInt32 minOffs = end;
+            var minOffs = end;
             // Need at least the address plus one byte for a 0-terminated name.
-            Boolean foundEndAddress = false;
-            Boolean foundEndAddressEntryV3 = false;
-            Boolean foundNullAddress = false;
-            Boolean foundNullName = false;
-            UInt32 address = 0;
-            List<ArchiveEntry> filesList = new List<ArchiveEntry>();
+            var foundEndAddress = false;
+            var foundEndAddressEntryV3 = false;
+            var foundNullAddress = false;
+            var foundNullName = false;
+            uint address = 0;
+            var filesList = new List<ArchiveEntry>();
+            Span<byte> nameBuf = stackalloc byte[13];
             while (loadStream.Position < minOffs)
             {
-                if (loadStream.Read(addressBuffer, 0, 4) < 4)
+                if (loadStream.Read(addressBuffer) < addressBuffer.Length)
                     throw new FileTypeLoadException("Archive not long enough to read file offset.");
-                address = (UInt32)ArrayUtils.ReadIntFromByteArray(addressBuffer, 0, 4, true);
+                address = (uint)ArrayUtils.ReadIntFromByteArray(addressBuffer, true);
                 if (address == 0)
                 {
                     foundNullAddress = true;
-                    if (curEntry != null && curEntry.Length == -1 && this.PakVer == PakVersion.PakVersion2)
-                        curEntry.Length = (Int32)end - curEntry.StartOffset;
+                    if (curEntry is { Length: -1 } && this.PakVer == PakVersion.PakVersion2)
+                        curEntry.Length = (int)end - curEntry.StartOffset;
                 }
                 if (address == end && this.PakVer == PakVersion.PakVersion1)
                 {
                     foundEndAddress = true;
-                    if (curEntry != null && curEntry.Length == -1)
-                        curEntry.Length = (Int32)end - curEntry.StartOffset;
+                    if (curEntry is { Length: -1 })
+                        curEntry.Length = (int)end - curEntry.StartOffset;
                 }
                 if (this.PakVer == PakVersion.PakVersion3 && foundNullName && foundEndAddressEntryV3 && foundNullAddress)
                     break;
@@ -75,25 +82,25 @@ namespace LibrarianTool.Domain.Archives
                 if (address > end)
                     throw new FileTypeLoadException("Archive entry outside file bounds.");
 
-                if (curEntry != null && curEntry.Length == -1)
-                    curEntry.Length = (Int32)address - curEntry.StartOffset;
+                if (curEntry is { Length: -1 })
+                    curEntry.Length = (int)address - curEntry.StartOffset;
 
-                Byte[] nameBuf = new Byte[13];
-                Int32 curNamePos;
+                int curNamePos;
                 for (curNamePos = 0; curNamePos < nameBuf.Length; curNamePos++)
                 {
-                    Int32 curByte = loadStream.ReadByte();
+                    var curByte = loadStream.ReadByte();
                     if (curByte == -1)
                         throw new FileTypeLoadException("Archive not long enough to read file name.");
                     if (curByte == 0)
                         break;
                     if (curByte < 0x20)
                         throw new FileTypeLoadException("Illegal values in file name.");
-                    nameBuf[curNamePos] = (Byte) curByte;
+                    nameBuf[curNamePos] = (byte)curByte;
                 }
-                if (curNamePos == 13)
+                if (curNamePos >= 13)
                     throw new FileTypeLoadException("Bad file name.");
-                String curName = enc.GetString(nameBuf.TakeWhile(x => x != 0).ToArray());
+                ReadOnlySpan<byte> roNameBuf = nameBuf[..curNamePos];
+                var curName = Encoding.ASCII.GetString(roNameBuf);
                 if (curName.Length == 0)
                 {
                     foundNullName = true;
@@ -101,31 +108,38 @@ namespace LibrarianTool.Domain.Archives
                     {
                         foundEndAddressEntryV3 = true;
                         if (curEntry != null)
-                            curEntry.Length = (Int32)address - curEntry.StartOffset;
+                            curEntry.Length = (int)address - curEntry.StartOffset;
                     }
                 }
                 if (!foundEndAddress && !foundNullAddress && !foundNullName)
                 {
-                    curEntry = new ArchiveEntry(curName, archivePath, (Int32) address, -1);
+                    curEntry = new ArchiveEntry(curName, archivePath, (int)address, -1);
                     minOffs = Math.Min(minOffs, address);
                     filesList.Add(curEntry);
                 }
             }
 
-            if (this.PakVer == PakVersion.PakVersion3 && (!foundNullName || !foundEndAddressEntryV3 || !foundNullAddress))
-                throw new FileTypeLoadException("This is not a v3 PAK file.");
-            if (this.PakVer == PakVersion.PakVersion2 && (foundNullName || foundEndAddress || !foundNullAddress))
-                throw new FileTypeLoadException("This is not a v2 PAK file.");
-            if (this.PakVer == PakVersion.PakVersion1 && (foundNullName || foundNullAddress))
-                throw new FileTypeLoadException("This is not a v1 PAK file.");
-            if (this.PakVer == PakVersion.PakVersion1 && !foundEndAddress && loadStream.Position == minOffs && curEntry != null && curEntry.Length == -1)
+            switch (this.PakVer)
             {
-                // Seems to be a problem in some v1 pak files where the last entry is gibberish.
-                curEntry.Length = (Int32)end - curEntry.StartOffset;
-                this.ExtraInfo = "File has corrupted end offset: " + address.ToString("X8");
+                case PakVersion.PakVersion3 when (!foundNullName || !foundEndAddressEntryV3 || !foundNullAddress):
+                    throw new FileTypeLoadException("This is not a v3 PAK file.");
+                case PakVersion.PakVersion2 when (foundNullName || foundEndAddress || !foundNullAddress):
+                    throw new FileTypeLoadException("This is not a v2 PAK file.");
+                case PakVersion.PakVersion1 when (foundNullName || foundNullAddress):
+                    throw new FileTypeLoadException("This is not a v1 PAK file.");
+                case PakVersion.PakVersion1 when !foundEndAddress && loadStream.Position == minOffs && curEntry is { Length: -1 }:
+                    // Seems to be a problem in some v1 pak files where the last entry is gibberish.
+                    curEntry.Length = (int)end - curEntry.StartOffset;
+                    var warning = "File has corrupted end offset: " + address.ToString("X8");
+                    if (this.ExtraInfo == null)
+                        this.ExtraInfo = warning;
+                    else
+                        this.ExtraInfo = ExtraInfo + " " + warning;
+                    break;
             }
+
             // All cases should be handled.
-            if (curEntry != null && curEntry.Length == -1)
+            if (curEntry is { Length: -1 })
                 throw new FileTypeLoadException("This is not a PAK file.");
             // Not gonna allow this. Too much chance on empty edge cases.
             if (filesList.Count == 0)
@@ -133,11 +147,11 @@ namespace LibrarianTool.Domain.Archives
             return filesList;
         }
 
-        public override Boolean SaveArchive(Archive archive, Stream saveStream, String savePath)
+        public override bool SaveArchive(Archive archive, Stream saveStream, string savePath)
         {
-            ArchiveEntry[] entries = archive.FilesList.ToArray();
+            var entries = archive.FilesList.ToArray();
             // Filename lengths + version-dependent padding
-            Int32 firstFileOffset = entries.Sum(en => en.FileName.Length) + entries.Length * 5;
+            var firstFileOffset = entries.Sum(en => en.FileName.Length) + entries.Length * 5;
             switch (this.PakVer)
             {
                 case PakVersion.PakVersion1:
@@ -151,32 +165,32 @@ namespace LibrarianTool.Domain.Archives
                     firstFileOffset += 9;
                     break;
             }
-            Int32 fileOffset = firstFileOffset;
-            Encoding enc = Encoding.GetEncoding(437);
+            var fileOffset = firstFileOffset;
+            var enc = Encoding.GetEncoding(437);
 
-            Byte[] buffer = new Byte[13];
-            using (BinaryWriter bw = new BinaryWriter(new NonDisposingStream(saveStream)))
+            var buffer = new byte[13];
+            using (var bw = new BinaryWriter(saveStream, Encoding.ASCII, true))
             {
-                foreach (ArchiveEntry entry in entries)
+                foreach (var entry in entries)
                 {
-                    Int32 fileLength = entry.Length;
-                    String curName = entry.FileName;
+                    var fileLength = entry.Length;
+                    var curName = entry.FileName;
                     if (entry.PhysicalPath != null)
                     {
                         // To be 100% sure the index is OK, this is updated at the moment of writing.
-                        FileInfo fi = new FileInfo(entry.PhysicalPath);
+                        var fi = new FileInfo(entry.PhysicalPath);
                         if (!fi.Exists)
                             throw new FileNotFoundException("Cannot find file \"" + entry.PhysicalPath + "\" to write to archive!");
-                        fileLength = (Int32) fi.Length;
+                        fileLength = (int)fi.Length;
                         // not really necessary since the input method takes care of it, but, just to be sure.
                         curName = this.GetInternalFilename(entry.FileName);
                     }
                     bw.Write(fileOffset);
                     fileOffset += fileLength;
-                    Int32 copySize = curName.Length;
+                    var copySize = curName.Length;
                     Array.Copy(enc.GetBytes(curName), 0, buffer, 0, copySize);
-                    for (Int32 b = copySize; b < 13; b++)
-                        buffer[b] = 0;
+                    if (buffer.Length > copySize)
+                        Array.Clear(buffer, copySize, buffer.Length - copySize);
                     bw.Write(buffer, 0, copySize + 1);
                 }
                 switch (this.PakVer)
@@ -185,18 +199,18 @@ namespace LibrarianTool.Domain.Archives
                         bw.Write(fileOffset);
                         break;
                     case PakVersion.PakVersion2:
-                        bw.Write((Int32)0);
+                        bw.Write(0);
                         break;
                     case PakVersion.PakVersion3:
                         bw.Write(fileOffset);
                         bw.Write(0);
-                        bw.Write((Byte)0);
+                        bw.Write((byte)0);
                         break;
                 }
             }
             if (firstFileOffset != saveStream.Position)
                 throw new IndexOutOfRangeException("Programmer error: write start offset does not match end of index.");
-            foreach (ArchiveEntry entry in entries)
+            foreach (var entry in entries)
                 CopyEntryContentsToStream(entry, saveStream);
             return true;
         }
@@ -207,6 +221,5 @@ namespace LibrarianTool.Domain.Archives
             PakVersion2 = 2,
             PakVersion3 = 3,
         }
-
     }
 }
